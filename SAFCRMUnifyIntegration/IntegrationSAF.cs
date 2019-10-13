@@ -57,8 +57,8 @@ namespace SAFCRMUnifyIntegration
             string ledgerParentId = string.Empty;
             string placeOfConsumptionId = string.Empty;
             String childDomainId = String.Empty;
-            int industryname = 0;
-            int verticalsegmentno = 0;
+            
+           
             String LedgerparentId = String.Empty;
             String requestXml = String.Empty;
             string localIP = "?";
@@ -114,7 +114,7 @@ namespace SAFCRMUnifyIntegration
 
                             Buildingname = BuldingID.Name;
 
-
+                            int industryname, verticalsegmentno;
                             Entity oppty = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_customersegmentonl"));
                             if (oppty.Attributes.Contains("onl_customersegmentonl"))
                             {

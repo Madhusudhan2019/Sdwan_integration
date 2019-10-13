@@ -40,16 +40,16 @@ namespace SAFCRMUnifyIntegration
 
             if (context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity)
             {
-                Entity workorders = (Entity)context.InputParameters["Target"];
-                if (workorders.LogicalName != "onl_workorders")
+                Entity workorder = (Entity)context.InputParameters["Target"];
+                if (workorder.LogicalName != "onl_workorders")
                     return;
-                Entity workorder = context.PostEntityImages["PostImage"];
-                if (workorder.GetAttributeValue<OptionSetValue>("onl_spectra_orderstatus").Value == 122050005) //when status is Provisioning Completed
+                Entity workorders = context.PostEntityImages["PostImage"];
+                if (workorders.GetAttributeValue<OptionSetValue>("onl_spectra_orderstatus").Value == 122050005) //when status is Provisioning Completed
                 {
-                    EntityReference refsafid = workorder.GetAttributeValue<EntityReference>("spectra_safid");
+                    EntityReference refsafid = workorders.GetAttributeValue<EntityReference>("spectra_safid");
                     Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
                     CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
-                    CreateAccountContractRequest(service, SAF, CanNo, context, workorder);
+                    CreateAccountContractRequest(service, SAF, CanNo, context, workorders);
                 }
 
             }
