@@ -49,11 +49,11 @@ namespace SAFCRMUnifyIntegration
                     EntityReference refsafid = workorders.GetAttributeValue<EntityReference>("spectra_safid");
                     Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
                     //
-                    if (SAF.Attributes.Contains("onl_orgcreationresponseonl"))
-                    {
-                        if (!SAF.GetAttributeValue<Boolean>("onl_orgcreationresponseonl"))
-                            return;
-                    }
+                    //if (SAF.Attributes.Contains("onl_orgcreationresponseonl"))
+                    //{
+                    //    if (!SAF.GetAttributeValue<Boolean>("onl_orgcreationresponseonl"))
+                    //        return;
+                    //}
 
                     CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
 
@@ -132,6 +132,7 @@ namespace SAFCRMUnifyIntegration
 
             string firstInvoiceDateString = null;
             string billEndDateString = null;
+           
             Entity oppbillcycle = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_billcycleonl"));
 
             
@@ -327,6 +328,11 @@ namespace SAFCRMUnifyIntegration
                         log.Id = IntegrationLogId;
                         log["alletech_code"] = Code;
                         log["alletech_message"] = Message;
+                        EntityReference refsite = workorder.GetAttributeValue<EntityReference>("onl_sitenameid");
+                        log["spectra_siteidid"] = new EntityReference("onl_customersite", refsite.Id);
+                        // IntegrationLog["alletech_can"] = new EntityReference("onl_saf", SAF.Id);
+                        Guid safid = SAF.Id;
+                        log["onl_safid"] = new EntityReference("onl_saf", safid);
                         service.Update(log);
                         flag = true;
                     }
