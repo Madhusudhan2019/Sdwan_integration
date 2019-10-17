@@ -253,9 +253,9 @@ namespace SAFCRMUnifyIntegration
             "<billCycle>" + billingFrequency + "</billCycle>" +
             "<billCycleDuration>M</billCycleDuration>" +
             "<firstInvoiceDate>" + firstInvoiceDateString + "</firstInvoiceDate>" +
-            "<invoiceTemplateNo>" + invoiceTemplateNo + "</invoiceTemplateNo>" +
+            "<invoiceTemplateNo>145</invoiceTemplateNo>" +
             "<receiptTemplateNo>3</receiptTemplateNo>";
-
+            domSegment = 0;
             if (domSegment != 0)
                 requestXml += "<domSegmentMapId>" + domSegment + "</domSegmentMapId>";
 

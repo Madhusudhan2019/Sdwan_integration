@@ -1566,8 +1566,9 @@ namespace SAFCRMUnifyIntegration
                 if (SAF.Attributes.Contains("onl_spectra_accountid"))
                     canId = SAF.GetAttributeValue<String>("onl_spectra_accountid");
 
+                string Account = GetAccountNo(service, CreateAccountId);
 
-                ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, canId);
+                ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Account);
                 FilterExpression filter = new FilterExpression();
                 filter.AddCondition(condition);
                 filter.FilterOperator = LogicalOperator.And;
@@ -1775,12 +1776,12 @@ namespace SAFCRMUnifyIntegration
 
                         Guid parentAccountId = service.Create(parentAccount);
 
-                        string Account = GetAccountNo(service, parentAccountId);
+                        string Account2 = GetAccountNo(service, parentAccountId);
 
                         // Parent Account Association at Child Account
                         #region Parent Account update Shortname
 
-                        ConditionExpression ParentAccondition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Account);
+                        ConditionExpression ParentAccondition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Account2);
                         FilterExpression Parentfilter = new FilterExpression();
                         Parentfilter.AddCondition(ParentAccondition);
                         Parentfilter.FilterOperator = LogicalOperator.And;

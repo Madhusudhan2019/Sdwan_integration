@@ -100,7 +100,7 @@ namespace SAFCRMUnifyIntegration
 
                 tracingService.Trace("servicegroupno : " + servicegroupno);
                 tracingService.Trace("subcrino : " + subcrino);
-                subcrino = 2345;
+                //subcrino = 2345;
             }
             else
             {
@@ -390,13 +390,14 @@ namespace SAFCRMUnifyIntegration
             "<billCycle>" + billingFrequency + "</billCycle>" +
             "<billCycleDuration>M</billCycleDuration>" +
             "<firstInvoiceDate>" + firstInvoiceDateString + "</firstInvoiceDate>" +
-            "<invoiceTemplateNo>" + invoiceTemplateNo + "</invoiceTemplateNo>" +
+            "<invoiceTemplateNo>145</invoiceTemplateNo>" +
             "<receiptTemplateNo>3</receiptTemplateNo>";
+            domSegment = 0;
             if (domSegment != 0)
                 requestXml += "<domSegmentMapId>" + domSegment + "</domSegmentMapId>";
             requestXml += "</BillRequest>" +
             "<SessionObject>" +
-            "<ipAddress>1.1.1.1< /ipAddress>" +
+            "<ipAddress>180.151.100.74</ipAddress>" +
             "<userName>crm.admin</userName>" +
             "<usrNo>10651</usrNo>" +
             "</SessionObject>" +
@@ -452,6 +453,12 @@ namespace SAFCRMUnifyIntegration
                         IntegrationLog["alletech_message"] = Message;
                         IntegrationLog["alletech_name"] = "Contract_Created_" + CAF_No + "_" + CAN_No;//Contract_Created_
                         IntegrationLog["alletech_responsetype"] = new OptionSetValue(3);
+                        EntityReference refsite = workorder.GetAttributeValue<EntityReference>("onl_sitenameid");
+                        IntegrationLog["spectra_siteidid"] = new EntityReference("onl_customersite", refsite.Id);
+                        // IntegrationLog["alletech_can"] = new EntityReference("onl_saf", SAF.Id);
+                        Guid safid = SAF.Id;
+                        IntegrationLog["onl_safid"] = new EntityReference("onl_saf", safid);
+
                         service.Create(IntegrationLog);
                     }
                     #endregion
