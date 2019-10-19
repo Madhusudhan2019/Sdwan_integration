@@ -22,6 +22,7 @@ namespace SAFCRMUnifyIntegration
         String childshortname = String.Empty;
         String billingContactfirst = String.Empty;
         Guid CreateAccountId = new Guid();
+        Guid NewAccountid = new Guid();
         private Dictionary<string, string> globalConfig = new Dictionary<string, string>();
         public IntegrationSAF(string unsecureString, string secureString)
         {
@@ -83,1165 +84,1187 @@ namespace SAFCRMUnifyIntegration
                     tracingService.Trace("Entity id " + SAF.Id);
 
 
-                    if (SAF.Attributes.Contains("onl_spectra_accountid"))
+                    //if (SAF.Attributes.Contains("onl_spectra_accountid"))
+                    //{
+                    if (SAF.GetAttributeValue<OptionSetValue>("onl_status").Value == 122050002)
                     {
-                        if (SAF.GetAttributeValue<OptionSetValue>("onl_status").Value == 122050002)
+                        Entity oppRef1 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_opportunityidid"));
+                        EntityReference ownerLookup = (EntityReference)oppRef1.Attributes["onl_opportunityidid"];
+
+                        var opportunityName = ownerLookup.Name;
+                        Guid opportunityid = ownerLookup.Id; // getting opportunity id based on SAFID
+
+                        //getting Area id on behalf of opportunity id mapping
+                        Entity Parent_area = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_area"));
+                        //lookup area Entity   
+                        EntityReference AreaID = (EntityReference)Parent_area.Attributes["alletech_area"];
+                        Guid Areaid = AreaID.Id; // getting Area id based on Opportunity id
+                                                 //getting Area Name on behalf of Area id 
+
+
+                        Entity Parent_Buildingname = service.Retrieve("alletech_area", Areaid, new ColumnSet("alletech_name"));
+                        //lookup Building Name
+                        var Areaname = Parent_Buildingname.GetAttributeValue<String>("alletech_name");
+                        areaname = Areaname;
+
+                        //Alletech Buliding Name
+                        Entity Parent_buliding = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_buildingname"));
+                        //lookup Building Name
+                        EntityReference BuldingID = (EntityReference)Parent_buliding.Attributes["alletech_buildingname"];
+                        Guid bID = BuldingID.Id;//getting Building Name id based on Opportunity id
+
+                        Buildingname = BuldingID.Name;
+
+                        int industryname, verticalsegmentno;
+                        Entity oppty = service.Retrieve("opportunity", opportunityid, new ColumnSet("spectra_customersegmentcode"));
+                        if (oppty.Attributes.Contains("spectra_customersegmentcode"))
                         {
-                            Entity oppRef1 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_opportunityidid"));
-                            EntityReference ownerLookup = (EntityReference)oppRef1.Attributes["onl_opportunityidid"];
+                            string customersegment = oppty.FormattedValues["spectra_customersegmentcode"].ToString();
 
-                            var opportunityName = ownerLookup.Name;
-                            Guid opportunityid = ownerLookup.Id; // getting opportunity id based on SAFID
+                            if (customersegment.ToLower() == "smb")
+                                industryname = 22;//smb
+                            else if (customersegment.ToLower() == "la")
+                                industryname = 23;//LA
+                            else if (customersegment.ToLower() == "media")
+                                industryname = 10;//media
+                            else if (customersegment.ToLower() == "sp")
+                                industryname = 11;//service provider
+                        }
+                        else
+                        {
+                            industryname = 22;
+                            tracingService.Trace("Customer Segment is Empty on Lead");
+                        }
+                        //Product Segment
+                        Entity Productrecord = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_productsegment"));
 
-                            //getting Area id on behalf of opportunity id mapping
-                            Entity Parent_area = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_area"));
-                            //lookup area Entity   
-                            EntityReference AreaID = (EntityReference)Parent_area.Attributes["alletech_area"];
-                            Guid Areaid = AreaID.Id; // getting Area id based on Opportunity id
-                                                     //getting Area Name on behalf of Area id 
+                        if (Productrecord.Attributes.Contains("onl_spectra_productsegment"))
+                        {
+                            string Productsegment = ((EntityReference)(Productrecord.Attributes["onl_spectra_productsegment"])).Name;
+                            Productsegmentid = ((EntityReference)(Productrecord.Attributes["onl_spectra_productsegment"])).Id;
 
-
-                            Entity Parent_Buildingname = service.Retrieve("alletech_area", Areaid, new ColumnSet("alletech_name"));
-                            //lookup Building Name
-                            var Areaname = Parent_Buildingname.GetAttributeValue<String>("alletech_name");
-                            areaname = Areaname;
-
-                            //Alletech Buliding Name
-                            Entity Parent_buliding = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_buildingname"));
-                            //lookup Building Name
-                            EntityReference BuldingID = (EntityReference)Parent_buliding.Attributes["alletech_buildingname"];
-                            Guid bID = BuldingID.Id;//getting Building Name id based on Opportunity id
-
-                            Buildingname = BuldingID.Name;
-
-                            int industryname, verticalsegmentno;
-                            Entity oppty = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_customersegmentonl"));
-                            if (oppty.Attributes.Contains("onl_customersegmentonl"))
+                            if (Productsegment == "SDWAN")
                             {
-                                string customersegment = oppty.FormattedValues["onl_customersegmentonl"].ToString();
-
-                                if (customersegment.ToLower() == "smb")
-                                    industryname = 22;//smb
-                                else if (customersegment.ToLower() == "la")
-                                    industryname = 23;//LA
-                                else if (customersegment.ToLower() == "media")
-                                    industryname = 10;//media
-                                else if (customersegment.ToLower() == "sp")
-                                    industryname = 11;//service provider
-                            }
-                            else
-                            {
-                                industryname = 22;
-                                tracingService.Trace("Customer Segment is Empty on Lead");
-                            }
-                            //Product Segment
-                            Entity Productrecord = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_productsegment"));
-
-                            if (Productrecord.Attributes.Contains("onl_spectra_productsegment"))
-                            {
-                                string Productsegment = ((EntityReference)(Productrecord.Attributes["onl_spectra_productsegment"])).Name;
-                                Productsegmentid = ((EntityReference)(Productrecord.Attributes["onl_spectra_productsegment"])).Id;
-
-                                if (Productsegment == "SDWAN")
-                                {
-                                    verticalsegmentno = 8;
-                                }
-                            }
-                            else
-                            {
-                                tracingService.Trace("Product Segment is not configured on Product");
-                            }
-                            if (SAF.Attributes.Contains("onl_spectra_accountid"))
-                                CanNo = SAF.GetAttributeValue<String>("onl_spectra_accountid");
-                            else
-                                throw new InvalidPluginExecutionException("CAN ID is empty");
-
-                            #region Add Child account updation
-                            //call child account update 
-                       //     ChildAccountUpdation(service, SAF, opportunityid, context);
-                            #endregion
-
-                            #region Check Parent account condition 
-                            if (!SAF.Attributes.Contains("onl_parentaccountonl"))
-                            {
-                                ParentAccountCreation(service, ref SAF, opportunityid, context);
-                                AccountShortName1(service, SAF, context, CanNo);
-                            }
-
-                            #endregion
-                            Entity SAF1 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet(true));
-
-                            ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, CanNo);
-                            FilterExpression filter = new FilterExpression();
-                            filter.AddCondition(condition);
-                            filter.FilterOperator = LogicalOperator.And;
-                            QueryExpression query = new QueryExpression
-                            {
-                                EntityName = "account",
-                                ColumnSet = new ColumnSet(true),
-                                Criteria = filter,
-                            };
-                            EntityCollection childAccountCollection = service.RetrieveMultiple(query);
-                            Entity childAccount = childAccountCollection.Entities[0];
-
-                            if (childAccount.Attributes.Contains("name"))
-                                childName = childAccount.GetAttributeValue<String>("name");
-
-
-                            if (childAccount.Attributes.Contains("alletech_unifyshortname"))
-                                childshortname = childAccount.GetAttributeValue<String>("alletech_unifyshortname");
-
-                            string paccshort = childshortname.Split('-')[0];
-
-
-                            #region billing record start
-
-                            //  Entity Parent_SAfName = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_name")); //getting SAF Name on behalf of safid
-                            SafNo = SAF.GetAttributeValue<String>("onl_name");//getting SAF Name
-
-                            //Entity Parent_TANId = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_tanno")); 
-                            Tan = SAF.GetAttributeValue<String>("onl_tanno");//getting TAN Id on behalf of safid
-                            //Entity Parent_PANId = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_panno")); 
-                            Pan = SAF.GetAttributeValue<String>("onl_panno");//getting PAN Id on behalf of safid
-                            //Entity Parent_GST = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_gstnumber")); 
-                            Gst = SAF.GetAttributeValue<String>("onl_gstnumber");//getting PAN Id on behalf of safid
-
-
-
-
-                            Entity Parent_city = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_city"));
-                            //lookup area Entity   
-                            EntityReference ECityId = (EntityReference)Parent_city.Attributes["alletech_city"];
-                            //get City Id
-                            Guid pCityId = ECityId.Id;
-                            var cityname = ECityId.Name;
-                            QueryExpression querydom = new QueryExpression();
-                            querydom.EntityName = "alletech_domain";
-                            querydom.ColumnSet.AddColumns("alletech_name", "alletech_domain_id");
-                            querydom.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
-                            querydom.Criteria.AddCondition("pcl_city", ConditionOperator.Equal, pCityId);
-                            EntityCollection result1 = service.RetrieveMultiple(querydom);
-                            Entity domainentity = result1.Entities[0];
-                            if (domainentity.Attributes.Contains("alletech_domain_id"))
-                                childDomainId = domainentity.Attributes["alletech_domain_id"].ToString();
-
-
-                            Entity oppsocalmedia = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_facebookid", "alletech_twitterid", "alletech_emailid", "alletech_mobileno", "alletech_salutation"));
-                            var Facebook = oppsocalmedia.GetAttributeValue<String>("alletech_facebookid");
-                            var Twitter = oppsocalmedia.GetAttributeValue<String>("alletech_twitterid");
-                            var Email = oppsocalmedia.GetAttributeValue<String>("alletech_emailid");
-                            var Mobile = oppsocalmedia.GetAttributeValue<String>("alletech_mobileno");
-                            var salutation = oppsocalmedia.GetAttributeValue<OptionSetValue>("alletech_salutation").Value.ToString();
-
-
-
-                            bool EndB = false;
-                            String firstnameAccShip = String.Empty;
-                            String lastnameAccShip = String.Empty;
-                            String billCityId = String.Empty;
-                            String ShipCityId = String.Empty;
-                            String firstName = String.Empty;
-                            String lastName = String.Empty;
-
-                            String billToStreet = String.Empty;
-                            String shipToStreet = String.Empty;
-                            String billToPincode = String.Empty;
-                            String shipToPincode = String.Empty;
-                            String billToState = String.Empty;
-                            String shipToState = String.Empty;
-                            String billToplotno = String.Empty;
-                            String billTofloor = String.Empty;
-                            String billTobuildingname = String.Empty;
-                            String billTolandmark = String.Empty;
-                            String billtostreetcomplete = String.Empty;
-                            String billtoarea = String.Empty;
-                            String shipToplotno = String.Empty;
-                            String shipTofloor = String.Empty;
-                            String shipTobuildingname = String.Empty;
-                            String shipTolandmark = String.Empty;
-                            String shiptostreetcomplete = String.Empty;
-                            String shiptoarea = String.Empty;
-                            String lastnameBill = String.Empty;
-                            string shipToblock = string.Empty;
-
-                            // Payment
-                            string paymentAmount = string.Empty;
-                            decimal payamt = 0;
-                            string securityAmount = string.Empty;
-                            string paymentType = string.Empty;
-                            string paymentDate = string.Empty;
-                            DateTime paymentDateString = new DateTime();
-                            string chequeNo = string.Empty;
-                            int bankNo = 0;
-                            string banBranch = string.Empty;
-                            string securityDepositType = string.Empty;
-
-
-                            string creditcardno = string.Empty;
-                            string approvalcodecredit = string.Empty;
-                            string debitcardno = string.Empty;
-                            string approvalcodedebit = string.Empty;
-
-                            //Entity childBillCity = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_cityonl"));
-                            //Entity childbuidingplot = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_buildingnoplotnoonl"));
-                            //Entity childbillfloor = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_floor"));
-                            //Entity childbillbuildingname = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_buildingnameonl"));
-                            //Entity childspecifybuilding = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_specifybuildingonl"));
-                            //Entity childbillarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_areaonl"));
-                            //Entity childspecifyarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_specifyareaonl"));
-                            //Entity childbilllandmark = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_landmarkifany"));
-                            //Entity childbillstreet = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_street"));
-
-                            tracingService.Trace("In Bill TO and Ship to Variables");
-                            if (SAF.Attributes.Contains("onl_cityonl"))
-                            {
-                                Entity city = service.Retrieve("alletech_city", SAF.GetAttributeValue<EntityReference>("onl_cityonl").Id, new ColumnSet("alletech_cityno"));
-                                billCityId = city.GetAttributeValue<String>("alletech_cityno");
-                                billCityId = string.IsNullOrWhiteSpace(billCityId) ? "0" : billCityId;
-                            }
-                            if (SAF.Attributes.Contains("onl_buildingnoplotnoonl"))
-                            {
-                                billToplotno = SAF.GetAttributeValue<string>("onl_buildingnoplotnoonl");
-                                billToplotno = billToplotno + ", ";
-                            }
-                            if (SAF.Attributes.Contains("onl_floor"))
-                            {
-
-                                billTofloor = SAF.GetAttributeValue<string>("onl_floor");
-                                billTofloor = billTofloor + ", ";
-                                billTofloor = "Floor - " + billTofloor;
-                            }
-                            if (SAF.Attributes.Contains("onl_buildingnameonl"))
-                            {
-
-                                if (SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_specifybuildingonl"))
-                                {
-                                    billTobuildingname = SAF.GetAttributeValue<string>("onl_specifybuildingonl");
-                                    billTobuildingname = billTobuildingname + ", ";
-                                }
-                                else if (SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name.ToLower() != "other")
-                                {
-                                    billTobuildingname = SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name;
-                                    billTobuildingname = billTobuildingname + ", ";
-                                }
-                            }
-                            if (SAF.Attributes.Contains("onl_areaonl"))
-                            {
-                                if (SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_specifyareaonl"))
-                                {
-                                    billtoarea = SAF.GetAttributeValue<string>("onl_specifyareaonl");
-                                    billtoarea = billtoarea + ", ";
-                                }
-                                else if (SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name.ToLower() != "other")
-                                {
-                                    billtoarea = SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name;
-                                    billtoarea = billtoarea + ", ";
-                                }
-                            }
-                            if (SAF.Attributes.Contains("onl_landmarkifany"))
-                            {
-                                billTolandmark = SAF.GetAttributeValue<string>("onl_landmarkifany");
-                            }
-
-                            if (SAF.Attributes.Contains("onl_street"))
-                            {
-                                billToStreet = SAF.GetAttributeValue<String>("onl_street");
-                                billToStreet = billToStreet + ", ";
-                            }
-
-                            billtostreetcomplete = billToplotno + billTofloor + billTobuildingname + billToStreet + billtoarea + billTolandmark;
-
-
-                            //Entity childbillpincode = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_pincode"));
-                            if (SAF.Attributes.Contains("onl_pincode"))
-                            {
-                                billToPincode = SAF.GetAttributeValue<string>("onl_pincode").Replace(" ", "");
-                            }
-
-                            //Entity childbillstate = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_stateonl"));
-                            if (SAF.Attributes.Contains("onl_stateonl"))
-                            {
-                                Entity state = service.Retrieve("alletech_state", SAF.GetAttributeValue<EntityReference>("onl_stateonl").Id, new ColumnSet("alletech_statename"));
-                                billToState = state.GetAttributeValue<String>("alletech_statename");
-                            }
-                            //Entity childsepectrapincode = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_pincode"));
-                            if (SAF.Attributes.Contains("onl_spectra_pincode"))
-                                shipToPincode = SAF.GetAttributeValue<String>("onl_spectra_pincode").Replace(" ", "");
-
-
-                            //Entity childsepectrastate = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_state"));
-                            if (SAF.Attributes.Contains("onl_spectra_state"))
-                            {
-                                Entity state = service.Retrieve("alletech_state", SAF.GetAttributeValue<EntityReference>("onl_spectra_state").Id, new ColumnSet("alletech_statename"));
-                                shipToState = state.GetAttributeValue<String>("alletech_statename");
-                            }
-                            #endregion
-
-                            #region Parent Account record 
-
-                            //Entity childSpectrabuidingplot = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_buildingnoplotno"));
-                            //Entity childspectrafloor = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_floor"));
-                            //Entity childspectrabuildingname = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_buildingname"));
-                            //Entity childspectraspecifybuilding = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_specifybuilding"));
-                            //Entity childspectraarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_area"));
-                            //Entity childspectraspecifyarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_specifyarea"));
-                            //Entity childspectralandmark = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_landmark"));
-                            //Entity childspectrastreet = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_street"));
-                            //Entity childspectrablock = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_block"));
-
-                            tracingService.Trace("After Billing street");
-
-                            #region Concatenated Street Shipping
-                            if (SAF.Attributes.Contains("onl_spectra_buildingnoplotno"))
-                            {
-                                shipToplotno = SAF.GetAttributeValue<string>("onl_spectra_buildingnoplotno");
-                                shipToplotno = shipToplotno + ", ";
-                            }
-                            if (SAF.Attributes.Contains("onl_spectra_floor"))
-                            {
-                                shipTofloor = SAF.GetAttributeValue<string>("onl_spectra_floor");
-                                shipTofloor = "Floor - " + shipTofloor + ", ";
-                            }
-                            if (SAF.Attributes.Contains("onl_spectra_buildingname"))
-                            {
-                                if (SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_spectra_specifybuilding"))
-                                {
-                                    shipTobuildingname = SAF.GetAttributeValue<string>("onl_spectra_specifybuilding");
-                                    shipTobuildingname = shipTobuildingname + ", ";
-                                }
-                                else if (SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Name.ToLower() != "other")
-                                {
-                                    shipTobuildingname = SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Name;
-                                    shipTobuildingname = shipTobuildingname + ", ";
-                                }
-                            }
-                            if (SAF.Attributes.Contains("onl_spectra_area"))
-                            {
-                                if (SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_spectra_specifyarea"))
-                                {
-                                    shiptoarea = SAF.GetAttributeValue<string>("onl_spectra_specifyarea");
-                                    shiptoarea = shiptoarea + ", ";
-                                }
-                                else if (SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Name.ToLower() != "other")
-                                {
-                                    shiptoarea = SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Name;
-                                    shiptoarea = shiptoarea + ", ";
-                                }
-                            }
-                            if (SAF.Attributes.Contains("onl_spectra_landmark"))
-                            {
-                                shipTolandmark = SAF.GetAttributeValue<string>("onl_spectra_landmark");
-                            }
-                            if (SAF.Attributes.Contains("onl_spectra_block"))
-                            {
-                                shipToblock = SAF.GetAttributeValue<string>("onl_spectra_block");
-                                shipToblock = "block- " + shipToblock + ", ";
-                            }
-
-                            if (SAF.Attributes.Contains("onl_spectra_street"))
-                            {
-                                shipToStreet = SAF.GetAttributeValue<String>("onl_spectra_street");
-                                shipToStreet = shipToStreet + ", ";
-                            }
-
-                            shiptostreetcomplete = shipToplotno + shipTofloor + shipToblock + shipTobuildingname + shipToStreet + shiptoarea + shipTolandmark;
-                            #endregion
-                            if (shiptostreetcomplete != null)
-                            {
-                                EndB = true;
-                            }
-                            //Entity childspectracity = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_city"));
-                            if (SAF.Attributes.Contains("onl_spectra_city"))
-                            {
-                                Entity city = service.Retrieve("alletech_city", SAF.GetAttributeValue<EntityReference>("onl_spectra_city").Id, new ColumnSet("alletech_cityno"));
-                                ShipCityId = city.GetAttributeValue<String>("alletech_cityno");
-                            }
-
-                            #endregion
-
-                            #region Reevenue group Entity record
-                            QueryExpression queryConfig = new QueryExpression("alletech_revenuegroup");
-                            queryConfig.ColumnSet = new ColumnSet(true);
-                            queryConfig.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
-                            queryConfig.Criteria.AddCondition("alletech_name", ConditionOperator.Equal, cityname);
-                            EntityCollection RevenuegroupCollection = service.RetrieveMultiple(queryConfig);
-
-                            Entity Rev = RevenuegroupCollection.Entities[0];
-                            if (RevenuegroupCollection.Entities.Count > 0)
-                            {
-                                // Entity Rev = RevenuegroupCollection.Entities[0]; 
-                                if (Rev.Attributes.Contains("alletech_id"))
-                                {
-                                    CafInsCityRevGrpId = Rev.GetAttributeValue<string>("alletech_id");
-                                }
-                                if (Rev.Attributes.Contains("alletech_revenuecoagroupid"))
-                                {
-                                    coaGroupNo = Rev.GetAttributeValue<int>("alletech_revenuecoagroupid").ToString();
-                                }
-                                if (Rev.Attributes.Contains("alletech_coano"))
-                                {
-                                    coaNo = Rev.GetAttributeValue<int>("alletech_coano").ToString();
-                                }
-                                if (Rev.Attributes.Contains("alletech_ledgerbookno"))
-                                {
-                                    ledgerBookNo = Rev.GetAttributeValue<int>("alletech_ledgerbookno").ToString();
-                                }
-                                if (Rev.Attributes.Contains("alletech_ledgerparentid"))
-                                {
-                                    ledgerParentId = Rev.GetAttributeValue<int>("alletech_ledgerparentid").ToString();
-                                }
-
-                                if (Rev.Attributes.Contains("alletech_placeofconsumptionid"))
-                                {
-                                    placeOfConsumptionId = Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString();
-
-                                }
-                                if (Rev.Attributes.Contains("alletech_receiptledgeraccountno"))
-                                {
-                                    receiptLedgerAccountNo = Rev.GetAttributeValue<int>("alletech_receiptledgeraccountno").ToString();
-                                }
-                                //throw new InvalidPluginExecutionException("sd:-" + placeOfConsumptionId.ToString());
-                            }
-                            #endregion
-                            //payment fields start
-
-                            #region payment mode type and bank details
-
-                            Entity cafPayment1 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_payinslip"));
-
-
-                            EntityReference cafPayment = cafPayment1.GetAttributeValue<EntityReference>("onl_payinslip");
-
-
-                            Entity payment = service.Retrieve("alletech_payment", cafPayment.Id, new ColumnSet(true));
-
-
-                            if (payment.Attributes.Contains("alletech_paymentmodetype"))
-                            {
-                                // Payment Mode== CASH
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(10)))
-                                {
-
-                                    paymentType = "unify.finance.instrument.type.cash";
-
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    if (payment.Attributes.Contains("alletech_paymentdate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-                                }
-                                //Payment Mode== CHEQUE
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(1)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.cheque";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    if (payment.Attributes.Contains("alletech_chequeddno"))
-                                        chequeNo = payment.GetAttributeValue<string>("alletech_chequeddno");
-                                    if (payment.Attributes.Contains("alletech_chequeddissuedate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_chequeddissuedate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-
-                                    EntityReference bankname = payment.GetAttributeValue<EntityReference>("alletech_banknameid");
-                                    Entity _bank = service.Retrieve("alletech_bank", bankname.Id, new ColumnSet("alletech_banknameid"));
-                                    if (_bank.Attributes.Contains("alletech_banknameid"))
-                                    {
-                                        bankNo = _bank.GetAttributeValue<Int32>("alletech_banknameid");
-                                    }
-                                    if (payment.Attributes.Contains("alletech_branch"))
-                                        banBranch = payment.GetAttributeValue<string>("alletech_branch");
-
-                                }
-                                //Payment Mode== CREDIT CARD
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(7)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.creditCard";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    if (payment.Attributes.Contains("alletech_refrenceid"))
-                                        approvalcodecredit = payment.GetAttributeValue<string>("alletech_refrenceid");
-                                    if (payment.Attributes.Contains("alletech_creditcardlast4digitno"))
-                                        creditcardno = payment.GetAttributeValue<string>("alletech_creditcardlast4digitno");
-
-                                    chequeNo = approvalcodecredit + " - " + creditcardno;
-
-                                    //if (payment.Attributes.Contains("alletech_paymentdate"))
-                                    if (payment.Attributes.Contains("alletech_paymentdate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-                                }
-
-
-                                //Payment Mode== DEBIT CARD
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(8)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.debitCard";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    if (payment.Attributes.Contains("alletech_debitcardapprovalcode"))
-                                        approvalcodedebit = payment.GetAttributeValue<string>("alletech_debitcardapprovalcode");
-                                    if (payment.Attributes.Contains("alletech_debitcardlast4digitno"))
-                                        debitcardno = payment.GetAttributeValue<string>("alletech_debitcardlast4digitno");
-
-                                    chequeNo = approvalcodedebit + " - " + debitcardno;
-
-                                    //if (payment.Attributes.Contains("alletech_paymentdate"))
-                                    if (payment.Attributes.Contains("alletech_paymentdate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-                                }
-
-                                //Payment Mode== DD
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(2)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.demanddraft";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    if (payment.Attributes.Contains("alletech_chequeddno"))
-                                        chequeNo = payment.GetAttributeValue<string>("alletech_chequeddno");
-                                    if (payment.Attributes.Contains("alletech_chequeddissuedate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_chequeddissuedate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-
-                                    EntityReference bankname = payment.GetAttributeValue<EntityReference>("alletech_banknameid");
-                                    Entity _bank = service.Retrieve("alletech_bank", bankname.Id, new ColumnSet("alletech_banknameid"));
-                                    if (_bank.Attributes.Contains("alletech_banknameid"))
-                                    {
-                                        bankNo = _bank.GetAttributeValue<Int32>("alletech_banknameid");
-
-                                    }
-                                    if (payment.Attributes.Contains("alletech_branch"))
-                                        banBranch = payment.GetAttributeValue<string>("alletech_branch");
-
-                                }
-
-                                //Payment Mode== RTGS
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(5)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.rtgs";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_transactionreferenceid"))
-                                        chequeNo = payment.GetAttributeValue<string>("alletech_transactionreferenceid");
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    //if (payment.Attributes.Contains("alletech_paymentdate"))
-                                    if (payment.Attributes.Contains("alletech_paymentdate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-                                }
-
-                                //Payment Mode== NEFT
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(4)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.neft";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_transactionreferenceid"))
-                                        chequeNo = payment.GetAttributeValue<string>("alletech_transactionreferenceid");
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    // if (payment.Attributes.Contains("alletech_paymentdate"))
-                                    if (payment.Attributes.Contains("alletech_paymentdate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-                                }
-
-                                //Paymentmode == EZETAP
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(11)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.ezetap";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_transactionreferenceid"))
-                                        chequeNo = payment.GetAttributeValue<string>("alletech_transactionreferenceid");
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    // if (payment.Attributes.Contains("alletech_paymentdate"))
-                                    if (payment.Attributes.Contains("alletech_paymentdate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-                                }
-
-                                //Paymentmode == EZETAP - CHEQUE
-                                if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(12)))
-                                {
-                                    paymentType = "unify.finance.instrument.type.ezetapcheque";
-                                    if (payment.Attributes.Contains("alletech_amount"))
-                                        payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
-                                    if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
-                                        securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
-
-                                    if (payment.Attributes.Contains("alletech_securitydeposittype"))
-                                        securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
-
-                                    if (payment.Attributes.Contains("alletech_chequeddno"))
-                                        chequeNo = payment.GetAttributeValue<string>("alletech_chequeddno");
-                                    if (payment.Attributes.Contains("alletech_chequeddissuedate"))
-                                        paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_chequeddissuedate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
-                                    paymentDate = DateFormater(paymentDateString);
-
-                                    EntityReference bankname = payment.GetAttributeValue<EntityReference>("alletech_banknameid");
-                                    Entity _bank = service.Retrieve("alletech_bank", bankname.Id, new ColumnSet("alletech_banknameid"));
-                                    if (_bank.Attributes.Contains("alletech_banknameid"))
-                                        bankNo = _bank.GetAttributeValue<Int32>("alletech_banknameid");
-
-                                    if (payment.Attributes.Contains("alletech_branch"))
-                                        banBranch = payment.GetAttributeValue<string>("alletech_branch");
-                                }
-                            }
-
-                            #endregion
-
-                            //payment fields end
-
-                            if (SAF.Attributes.Contains("onl_contactpersonname2"))
-                                billingContactfirst = SAF.GetAttributeValue<String>("onl_contactpersonname2");
-
-                            string[] ssize = billingContactfirst.Split(null);
-                            if (ssize.Length > 1)
-                            {
-                                firstnameAccShip = ssize[0];
-                                for (int k = 1; k < ssize.Length; k++)
-                                {
-                                    lastName = lastName + " " + ssize[k];
-                                }
-                            }
-                            else
-                                firstnameAccShip = ssize[0];
-
-                            //#region Constructing Request XML
-
-                            #region IP Address of Machine
-
-                            //IPHostEntry host;
-
-                            //host = Dns.GetHostEntry(Dns.GetHostName());
-                            //foreach (IPAddress ip in host.AddressList)
-                            //{
-                            //    if (ip.AddressFamily == AddressFamily.InterNetwork)
-                            //    {
-                            //        localIP = ip.ToString();
-                            //        break;
-                            //    }
-                            //}
-                            #endregion
-                            if (!SAF.Attributes.Contains("onl_parentaccountonl"))
-                            {
-                                #region Without Parent Account
-                                bool flag = false;
-                                // Check total no of Opportunity Sites  
-                                QueryExpression querycustomersite = new QueryExpression();
-                                querycustomersite.EntityName = "onl_customersite";
-                                querycustomersite.ColumnSet = new ColumnSet(true);
-                                querycustomersite.Criteria.AddCondition("onl_opportunityidid", ConditionOperator.Equal, opportunityid);
-                                EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
-                                decimal Sitecount = resultcustomersite.Entities.Count;
-                                //Payment Amount Divided by Total no of Sites
-                                paymentAmount = (payamt / Sitecount).ToString();
-                                //Security Amount Divided by Total  no of Sites
-                                if (securityAmount != null && securityAmount != string.Empty)
-                                    securityAmount = (decimal.Parse(securityAmount) / Sitecount).ToString();
-
-                                int rowcount = 1;
-                                foreach (Entity entity in resultcustomersite.Entities)
-                                {
-                                    if (rowcount > 1)
-                                    {
-                                        //get unify Account no
-                                        parentno = GetParentNo(service, CanNo);
-
-                                        string CreateSiteAccount = "CreateSiteAccount";
-                                        //Generate Account Based on Site Id 
-                                        ParentAccountSitesCreation(service, ref SAF, opportunityid, context, rowcount, childshortname, CreateSiteAccount);
-                                        //Get Account Created Id
-                                        CanNo = GetAccountNo(service, CreateAccountId);
-                                    }
-                                    #region getting site details
-                                    var sitename = entity.GetAttributeValue<String>("spectra_customername");
-
-                                    string[] ssizefullnmae = sitename.Split(null);
-                                    if (ssizefullnmae.Length > 1)
-                                    {
-                                        firstName = ssizefullnmae[0];
-                                        for (int k = 1; k < ssizefullnmae.Length; k++)
-                                        {
-                                            lastnameAccShip = lastnameAccShip + " " + ssizefullnmae[k];
-                                        }
-                                    }
-                                    else
-                                        firstName = ssizefullnmae[0];
-
-                                    #endregion
-
-                                    #region start xml  
-                                    requestXml = "";
-                                    requestXml += "<CRMCAFRequest>" +
-                                    "<CAF_No>" + SafNo + "</CAF_No>" +
-                                    "<CAN_No>" + CanNo + "</CAN_No>";
-                                    if (rowcount == 1)
-                                    {
-                                      
-
-                                        #region OrganisationRequest
-                                        requestXml += "<OrganisationRequest>" +
-                                        "<customer>true</customer>" +
-                                        "<domain>" + childDomainId + "</domain>" +
-                                        "<name>" + childName + "</name>" +
-                                        "<shortName>" + paccshort + "</shortName>" +
-                                        "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
-                                        "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
-                                        "<societyName>" + Buildingname + "</societyName>" +
-                                        "<areaName>" + areaname + "</areaName>" +
-                                        "<societyFieldId>2</societyFieldId>" +
-                                        "<areaFieldId>3</areaFieldId>" +
-                                        "<productSegmentNo>6</productSegmentNo>" +
-                                        "<verticalSegmentNo>8</verticalSegmentNo>" +
-                                        "<industryTypeNo>22</industryTypeNo>" +
-                                        "</OrganisationRequest>";
-                                        #endregion
-
-
-                                        requestXml += "<ChildOrganisationRequest>" +
-                                        "<customer>true</customer>" +
-                                        "<domain>" + childDomainId + "</domain>" +
-                                        "<name>" + childName + "</name>" +
-                                        "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
-                                        "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
-                                        "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
-                                        "<societyName>" + Buildingname + "</societyName>" +
-                                        "<areaName>" + areaname + "</areaName>" +
-                                        "<societyFieldId>2</societyFieldId>" +
-                                        "<areaFieldId>3</areaFieldId>" +
-                                        "<productSegmentNo>6</productSegmentNo>" +
-                                        "<verticalSegmentNo>8</verticalSegmentNo>" +
-                                        "<industryTypeNo>22</industryTypeNo>" +
-                                        "</ChildOrganisationRequest>";
-                                    }
-                                    else
-                                    {
-
-
-                                        requestXml += "<ChildOrganisationRequest>" +
-                                        "<customer>true</customer>" +
-                                        "<domain>" + childDomainId + "</domain>" +
-                                        "<name>" + childName + "</name>" +
-                                        "<parentNo>" + parentno + "</parentNo>" +
-                                        "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
-                                        "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
-                                        "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
-                                        "<societyName>" + Buildingname + "</societyName>" +
-                                        "<areaName>" + areaname + "</areaName>" +
-                                        "<societyFieldId>2</societyFieldId>" +
-                                        "<areaFieldId>3</areaFieldId>" +
-                                        "<productSegmentNo>6</productSegmentNo>" +
-                                        "<verticalSegmentNo>8</verticalSegmentNo>" +
-                                        "<industryTypeNo>22</industryTypeNo>" +
-                                        "</ChildOrganisationRequest>";
-                                    }
-                                    #region Contact details
-
-                                    #region Billing
-                                    requestXml += "<ContactDetails>" +
-                                    "<cityNo>" + billCityId + "</cityNo>" +
-                                    "<contactTypeNo>1</contactTypeNo>" +
-                                    "<firstName>" + firstnameAccShip + "</firstName>";
-                                    if (!String.IsNullOrEmpty(lastName))
-                                        requestXml = requestXml + "<lastName>" + lastName + "</lastName>";
-                                    requestXml += "<salutationNo>" + salutation + "</salutationNo>" +
-                                    "<pin>" + billToPincode + "</pin>" +
-                                    "<state>" + billToState + "</state>" +
-                                    "<street>" + billtostreetcomplete + "</street>" +
-                                    "</ContactDetails>" +
-                                    #endregion
-
-                                    #region  Shipping Address
-                            "<ContactDetails>" +
-                                   "<cityNo>" + billCityId + "</cityNo>" +
-                                    "<contactTypeNo>2</contactTypeNo>" +
-                                    "<firstName>" + firstName + "</firstName>";
-
-                                    if (!String.IsNullOrEmpty(lastnameAccShip))
-                                        requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
-
-                                    requestXml = requestXml +
-                                    "<salutationNo>" + salutation + "</salutationNo>" +
-                                    "<pin>" + shipToPincode + "</pin>" +
-                                    "<state>" + shipToState + "</state>" +
-                                    "<street>" + shiptostreetcomplete + "</street>" +
-                                    "</ContactDetails>";
-                                    #endregion
-
-                                    #endregion
-
-                                    //#region if MAC or CAC same state
-                                    //if (EndB)
-                                    //{
-                                    //    requestXml = requestXml + "<ContactDetails>" +                     //End A Address
-                                    //"<cityNo>" + ShipCityId + "</cityNo>" +
-                                    //"<contactTypeNo>8</contactTypeNo>" +
-                                    //"<firstName>" + firstnameAccShip + "</firstName>";
-
-                                    //    if (!String.IsNullOrEmpty(lastnameAccShip))
-                                    //        requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
-
-                                    //    requestXml = requestXml +
-                                    //    "<salutationNo>" + salutation + "</salutationNo>" +
-                                    //    "<pin>" + shipToPincode + "</pin>" +
-                                    //    "<state>" + shipToState + "</state>" +
-                                    //    "<street>" + shiptostreetcomplete + "</street>" +
-                                    //    "</ContactDetails>";
-                                    //    //}
-                                    //    //if (!String.IsNullOrEmpty(iabAddress))  //  installation address B (P2P Address)
-                                    //    //{
-                                    //    requestXml = requestXml + "<ContactDetails>" +
-                                    //    "<cityNo>" + billCityId + "</cityNo>" +
-                                    //    "<contactTypeNo>9</contactTypeNo>" +
-                                    //    "<firstName>" + firstnameAccShip + "</firstName>";
-
-                                    //    //if (!String.IsNullOrEmpty(iabContactLastName))
-                                    //    requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
-
-                                    //    requestXml = requestXml +
-                                    //   "<salutationNo>" + salutation + "</salutationNo>" +
-                                    //   "<pin>" + shipToPincode + "</pin>" +
-                                    //   "<state>" + shipToState + "</state>" +
-                                    //   "<street>" + billtostreetcomplete + "</street>" +
-                                    //   "</ContactDetails>";
-                                    //}
-                                    //#endregion
-
-                                    #region Bill  to communication
-                                    if (Email != null)
-                                    {
-                                        requestXml = requestXml + "<commMode>" +
-                                        "<commTypeNo>4</commTypeNo>" +
-                                        //"<contactNo></contactNo>" +     //  ----- bill email
-                                        "<isDefault>false</isDefault>" +
-                                        "<dnc>false</dnc>" +
-                                        "<ident>" + Email + "</ident>" +
-                                        "<contactType>BillTo</contactType>" +
-                                        "</commMode>";
-                                    }
-
-                                    if (Mobile != "")
-                                    {
-                                        requestXml = requestXml +
-                                        "<commMode>" + "<commTypeNo>2</commTypeNo>" +
-                                        // "<contactNo></contactNo>" +     //  ----- bill phone
-                                        "<isDefault>false</isDefault>" +
-                                        "<dnc>false</dnc>" +
-                                        "<ident>" + Mobile + "</ident>" +
-                                        "<contactType>BillTo</contactType>" +
-                                        "</commMode>";
-                                    }
-
-                                    if (Facebook != "")
-                                    {
-                                        requestXml = requestXml +
-                                        "<commMode>" +
-                                        "<commTypeNo>8</commTypeNo>" +
-                                        //"<contactNo></contactNo>" +     //  ----- bill to fb
-                                        "<isDefault>false</isDefault>" +
-                                        "<dnc>false</dnc>" +
-                                        "<ident>" + Facebook + "</ident>" +
-                                        "<contactType>BillTo</contactType>" +
-                                        "</commMode>";
-                                    }
-
-                                    if (Twitter != "")
-                                    {
-                                        requestXml = requestXml +
-                                        "<commMode>" +
-                                        "<commTypeNo>7</commTypeNo>" +
-                                        //"<contactNo></contactNo>" +     //  ----- bill to twitter
-                                        "<isDefault>false</isDefault>" +
-                                        "<dnc>false</dnc>" +
-                                        "<ident>" + Twitter + "</ident>" +
-                                        "<contactType>BillTo</contactType>" +
-                                        "</commMode>";
-                                    }
-                                    #endregion
-
-                                    #region Ship to communication
-                                    if (Email != "")
-                                    {
-                                        requestXml = requestXml +
-                                        "<commMode>" +
-                                        "<commTypeNo>4</commTypeNo>" +
-                                        //"<contactNo></contactNo>" +     //  ----- ship to email
-                                        "<isDefault>false</isDefault>" +
-                                        "<dnc>false</dnc>" +
-                                        "<ident>" + entity.GetAttributeValue<String>("onl_customeremailaddress") + "</ident>" +
-                                        "<contactType>ShipTo</contactType>" +
-                                        "</commMode>";
-                                    }
-
-                                    if (Mobile != "")
-                                    {
-                                        requestXml = requestXml +
-                                        "<commMode>" +
-                                        "<commTypeNo>2</commTypeNo>" +
-                                        //"<contactNo></contactNo>" +     //  ----- ship to phone
-                                        "<isDefault>false</isDefault>" +
-                                        "<dnc>false</dnc>" +
-                                        "<ident>" + entity.GetAttributeValue<String>("onl_ol_customercontactnumber") + "</ident>" +
-                                        "<contactType>ShipTo</contactType>" +
-                                        "</commMode>";
-                                    }
-                                    #endregion
-
-                                    //#region MAC and CAC Same state
-                                    //if (EndB)
-                                    //{
-                                    //    if (Email != "")
-                                    //    {
-                                    //        requestXml = requestXml +
-                                    //        "<commMode>" +
-                                    //        "<commTypeNo>4</commTypeNo>" +
-                                    //        "<isDefault>false</isDefault>" +
-                                    //        "<dnc>false</dnc>" +
-                                    //        "<ident>" + Email + "</ident>" +
-                                    //        "<contactType>EndA</contactType>" +
-                                    //        "</commMode>";
-                                    //    }
-
-                                    //    if (Mobile != "")
-                                    //    {
-                                    //        requestXml = requestXml +
-                                    //        "<commMode>" +
-                                    //        "<commTypeNo>2</commTypeNo>" +
-                                    //        "<isDefault>false</isDefault>" +
-                                    //        "<dnc>false</dnc>" +
-                                    //        "<ident>" + Mobile + "</ident>" +
-                                    //        "<contactType>EndA</contactType>" +
-                                    //        "</commMode>";
-                                    //    }
-
-                                    //    if (!String.IsNullOrEmpty(Email))  //  ----- End B to email
-                                    //    {
-                                    //        requestXml = requestXml +
-                                    //        "<commMode>" +
-                                    //        "<commTypeNo>4</commTypeNo>" +
-                                    //        // "<contactNo></contactNo>" +
-                                    //        "<isDefault>false</isDefault>" +
-                                    //        "<dnc>false</dnc>" +
-                                    //        "<ident>" + Email + "</ident>" +
-                                    //        "<contactType>EndB</contactType>" +
-                                    //        "</commMode>";
-                                    //    }
-
-                                    //    if (!String.IsNullOrEmpty(Mobile)) //  ----- End B to phone
-                                    //    {
-                                    //        requestXml = requestXml +
-                                    //        "<commMode>" +
-                                    //        "<commTypeNo>2</commTypeNo>" +
-                                    //        // "<contactNo></contactNo>" +
-                                    //        "<isDefault>false</isDefault>" +
-                                    //        "<dnc>false</dnc>" +
-                                    //        "<ident>" + Mobile + "</ident>" +
-                                    //        "<contactType>EndB</contactType>" +
-                                    //        "</commMode>";
-                                    //    }
-                                    //}
-                                    //#endregion
-
-                                    #region Ledger request 
-                                    requestXml = requestXml +
-                                    "<LedgerRequest>" +
-                                    "<coaGroupNo>" + coaGroupNo + "</coaGroupNo>" +
-                                    "<coaNo>" + coaNo + "</coaNo>" +
-                                    "<currencyISO>INR</currencyISO>" +
-                                    "<ledgerAccountTypeNo>3</ledgerAccountTypeNo>" +
-                                    "<ledgerBookNo>" + ledgerBookNo + "</ledgerBookNo>" +
-                                    "<name>" + childName + "</name>" +
-                                    "<parentId>" + ledgerParentId + "</parentId>" +
-
-                                    "<paymentAmnt>" + paymentAmount + "</paymentAmnt>" +
-                                    "<securityAmnt>" + securityAmount + "</securityAmnt>" +
-                                    "<paymentType>" + paymentType + "</paymentType>" +
-                                    "<depositType>" + securityDepositType + "</depositType>" +
-                                    "<paymentDate>" + paymentDate + "</paymentDate>" +
-                                    "<chequeNo>" + chequeNo + "</chequeNo>" +
-                                    "<bankNo>" + bankNo + "</bankNo>" +
-                                    "<bankBranch>" + banBranch + "</bankBranch>" +
-                                    "<gst>" + Gst + "</gst>" +
-                                    "<pan>" + Pan + "</pan>" +
-                                    "<tan>" + Tan + "</tan>" +
-                                    "</LedgerRequest>" +
-                                    #endregion
-
-                                    #region serviceGroup 
-                    "<serviceGroup>" +
-                                    "<actcat>2</actcat>" +
-                                    "<actid>" + CanNo + "</actid>" +
-                                    "<actname>" + childName + "</actname>" +
-                                    "<domno>" + childDomainId + "</domno>" +
-                                    "<placeOfConsumptionId>" + Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString() + "</placeOfConsumptionId>" +
-                                    "</serviceGroup>" +
-                                    #endregion
-
-                                    #region SessionObject
-                    "<SessionObject>" +
-                                    "<credentialId>1</credentialId>" +
-                                    "<ipAddress>22.23.25.12</ipAddress>" +
-                                    "<source>CRM</source>" +
-                                    "<userName>crm.admin</userName>" +
-                                    "<userType>123</userType>" +
-                                    "<usrNo>10651</usrNo>" +
-                                    "</SessionObject>" +
-                                    "</CRMCAFRequest>";
-                                    #endregion
-
-
-                                    if (requestXml.Contains("&"))
-                                    {
-                                        requestXml = requestXml.Replace("&", "&amp;");
-                                    }
-
-
-                                    var B2Buri = new Uri("http://jbossuat.spectranet.in:9001/rest/getCustomer/");
-                                    var uri = B2Buri;
-
-                                    Byte[] requestByte = Encoding.UTF8.GetBytes(requestXml);
-
-                                    WebRequest request = WebRequest.Create(uri);
-                                    request.Method = WebRequestMethods.Http.Post;
-                                    request.ContentLength = requestByte.Length;
-                                    request.ContentType = "text/xml; encoding='utf-8'";
-                                    request.GetRequestStream().Write(requestByte, 0, requestByte.Length);
-
-                                    // 
-                                    #region Response validation
-                                    try
-                                    {
-                                        if (context.Depth == 1)
-                                        {
-                                            using (var response = request.GetResponse())
-                                            {
-                                                XmlDocument xmlDoc = new XmlDocument();
-                                                xmlDoc.Load(response.GetResponseStream());
-                                                string tmp = xmlDoc.InnerXml.ToString();
-
-                                                string CAF_No, CAN_No, Code, Message;
-                                                #region To create Integration Log from Response
-                                                XmlNodeList node1 = xmlDoc.GetElementsByTagName("CRMCAFResponse");
-                                                for (int i = 0; i <= node1.Count - 1; i++)
-                                                {
-                                                    CAF_No = node1[i].ChildNodes.Item(0).InnerText.Trim();
-                                                    CAN_No = node1[i].ChildNodes.Item(1).InnerText.Trim();
-                                                    Code = node1[i].ChildNodes.Item(2).InnerText.Trim();
-                                                    Message = node1[i].ChildNodes.Item(3).InnerText.Trim();
-                                                    Entity IntegrationLog = new Entity("alletech_integrationlog_enterprise");
-                                                    IntegrationLog["alletech_cafno"] = CAF_No;
-                                                    IntegrationLog["alletech_canno"] = CAN_No;
-                                                    IntegrationLog["alletech_code"] = Code;
-                                                    IntegrationLog["alletech_message"] = Message;
-
-                                                    IntegrationLog["alletech_name"] = "Approved_" + CAF_No + "_" + CAN_No;
-
-                                                    IntegrationLog["alletech_responsetype"] = new OptionSetValue(2);
-                                                    IntegrationLog["alletech_approvalrequest"] = requestXml;
-                                                    Guid Siteguid = entity.Id;
-                                                    Guid safid = SAF.Id;
-                                                    //add site lookup 
-                                                    IntegrationLog["spectra_siteidid"] = new EntityReference("onl_customersite", Siteguid);
-                                                    // IntegrationLog["alletech_can"] = new EntityReference("onl_saf", SAF.Id);
-                                                    IntegrationLog["onl_safid"] = new EntityReference("onl_saf", safid);
-                                                    service.Create(IntegrationLog);
-                                                    flag = true;
-                                                }
-                                                #endregion
-                                            }
-                                            if (flag == true)
-                                            {
-                                                #region Update Customer Site Details 
-                                                Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_parentaccout", "spectra_siteaccountno", "spectra_siteresponse", "spectra_siteuserpassword"));
-
-                                                Sites["spectra_parentaccout"] = new EntityReference("account", CreateAccountId);
-                                                Sites["spectra_siteaccountno"] = CanNo;
-                                                Sites["spectra_siteresponse"] = "true";
-                                                Sites["spectra_siteuserpassword"] = CreateRandomPasswordWithRandomLength(8);
-                                                service.Update(Sites);
-                                                #endregion
-                                            }
-                                            else
-                                            {
-                                                Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_siteaccountno", "spectra_siteresponse"));
-                                                Sites["spectra_siteaccountno"] = CanNo;
-                                                Sites["spectra_siteresponse"] = "false";
-                                                service.Update(Sites);
-                                            }
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        throw new InvalidPluginExecutionException(ex.Message);
-                                    }
-                                    #endregion
-                                    #endregion
-                                    rowcount++;
-                                    System.Threading.Thread.Sleep(2000);
-                                }
-                                if (context.Depth == 1)
-                                {
-                                    Entity _saf = new Entity("onl_saf");
-                                    _saf.Id = SAF.Id;
-                                    _saf["onl_status"] = new OptionSetValue(122050003);
-                                    //_saf["onl_orgcreationresponseonl"] = true;
-                                    service.Update(_saf);
-                                }
-                                #endregion
-                            }
-                            else
-                            {
-                                //New Sites Created 
+                                verticalsegmentno = 8;
                             }
                         }
+                        else
+                        {
+                            tracingService.Trace("Product Segment is not configured on Product");
+                        }
+                        if (SAF.Attributes.Contains("onl_spectra_accountid"))
+                        {
+                            CanNo = SAF.GetAttributeValue<String>("onl_spectra_accountid");
+                        }
+                        else
+                        {
+
+                            Entity Parent_accountid = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_accountid"));
+                            CanNo = Parent_accountid.GetAttributeValue<String>("alletech_accountid");
+                        }
+
+                        #region Add Child account updation
+                        //call child account update 
+                  //      ChildAccountUpdation(service, SAF, opportunityid, context);
+                        #endregion
+
+                        #region Check Parent account condition 
+                        if (!SAF.Attributes.Contains("onl_parentaccountonl"))
+                        {
+                            ParentAccountCreation(service, ref SAF, opportunityid, context, CanNo);
+                            AccountShortName1(service, SAF, context, CanNo);
+                        }
+
+                        #endregion
+                        Entity SAF1 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet(true));
+
+                        ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, CanNo);
+                        FilterExpression filter = new FilterExpression();
+                        filter.AddCondition(condition);
+                        filter.FilterOperator = LogicalOperator.And;
+                        QueryExpression query = new QueryExpression
+                        {
+                            EntityName = "account",
+                            ColumnSet = new ColumnSet(true),
+                            Criteria = filter,
+                        };
+                        EntityCollection childAccountCollection = service.RetrieveMultiple(query);
+                        Entity childAccount = childAccountCollection.Entities[0];
+
+                        if (childAccount.Attributes.Contains("name"))
+                            childName = childAccount.GetAttributeValue<String>("name");
+
+
+                        if (childAccount.Attributes.Contains("alletech_unifyshortname"))
+                            childshortname = childAccount.GetAttributeValue<String>("alletech_unifyshortname");
+
+                        string paccshort = childshortname.Split('-')[0];
+
+
+                        #region billing record start
+
+                        //  Entity Parent_SAfName = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_name")); //getting SAF Name on behalf of safid
+                        SafNo = SAF.GetAttributeValue<String>("onl_name");//getting SAF Name
+
+                        //Entity Parent_TANId = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_tanno")); 
+                        Tan = SAF.GetAttributeValue<String>("onl_tanno");//getting TAN Id on behalf of safid
+                                                                         //Entity Parent_PANId = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_panno")); 
+                        Pan = SAF.GetAttributeValue<String>("onl_panno");//getting PAN Id on behalf of safid
+                                                                         //Entity Parent_GST = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_gstnumber")); 
+                        Gst = SAF.GetAttributeValue<String>("onl_gstnumber");//getting PAN Id on behalf of safid
+
+
+
+
+                        Entity Parent_city = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_city"));
+                        //lookup area Entity   
+                        EntityReference ECityId = (EntityReference)Parent_city.Attributes["alletech_city"];
+                        //get City Id
+                        Guid pCityId = ECityId.Id;
+                        var cityname = ECityId.Name;
+                        QueryExpression querydom = new QueryExpression();
+                        querydom.EntityName = "alletech_domain";
+                        querydom.ColumnSet.AddColumns("alletech_name", "alletech_domain_id");
+                        querydom.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
+                        querydom.Criteria.AddCondition("pcl_city", ConditionOperator.Equal, pCityId);
+                        EntityCollection result1 = service.RetrieveMultiple(querydom);
+                        Entity domainentity = result1.Entities[0];
+                        if (domainentity.Attributes.Contains("alletech_domain_id"))
+                            childDomainId = domainentity.Attributes["alletech_domain_id"].ToString();
+
+
+                        Entity oppsocalmedia = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_facebookid", "alletech_twitterid", "alletech_emailid", "alletech_mobileno", "alletech_salutation"));
+                        var Facebook = oppsocalmedia.GetAttributeValue<String>("alletech_facebookid");
+                        var Twitter = oppsocalmedia.GetAttributeValue<String>("alletech_twitterid");
+                        var Email = oppsocalmedia.GetAttributeValue<String>("alletech_emailid");
+                        var Mobile = oppsocalmedia.GetAttributeValue<String>("alletech_mobileno");
+                        var salutation = oppsocalmedia.GetAttributeValue<OptionSetValue>("alletech_salutation").Value.ToString();
+
+
+
+                        bool EndB = false;
+                        String firstnameAccShip = String.Empty;
+                        String lastnameAccShip = String.Empty;
+                        String billCityId = String.Empty;
+                        String ShipCityId = String.Empty;
+                        String firstName = String.Empty;
+                        String lastName = String.Empty;
+
+                        String billToStreet = String.Empty;
+                        String shipToStreet = String.Empty;
+                        String billToPincode = String.Empty;
+                        String shipToPincode = String.Empty;
+                        String billToState = String.Empty;
+                        String shipToState = String.Empty;
+                        String billToplotno = String.Empty;
+                        String billTofloor = String.Empty;
+                        String billTobuildingname = String.Empty;
+                        String billTolandmark = String.Empty;
+                        String billtostreetcomplete = String.Empty;
+                        String billtoarea = String.Empty;
+                        String shipToplotno = String.Empty;
+                        String shipTofloor = String.Empty;
+                        String shipTobuildingname = String.Empty;
+                        String shipTolandmark = String.Empty;
+                        String shiptostreetcomplete = String.Empty;
+                        String shiptoarea = String.Empty;
+                        String lastnameBill = String.Empty;
+                        string shipToblock = string.Empty;
+
+                        // Payment
+                        string paymentAmount = string.Empty;
+                        decimal payamt = 0;
+                        string securityAmount = string.Empty;
+                        string paymentType = string.Empty;
+                        string paymentDate = string.Empty;
+                        DateTime paymentDateString = new DateTime();
+                        string chequeNo = string.Empty;
+                        int bankNo = 0;
+                        string banBranch = string.Empty;
+                        string securityDepositType = string.Empty;
+
+
+                        string creditcardno = string.Empty;
+                        string approvalcodecredit = string.Empty;
+                        string debitcardno = string.Empty;
+                        string approvalcodedebit = string.Empty;
+
+                        //Entity childBillCity = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_cityonl"));
+                        //Entity childbuidingplot = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_buildingnoplotnoonl"));
+                        //Entity childbillfloor = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_floor"));
+                        //Entity childbillbuildingname = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_buildingnameonl"));
+                        //Entity childspecifybuilding = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_specifybuildingonl"));
+                        //Entity childbillarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_areaonl"));
+                        //Entity childspecifyarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_specifyareaonl"));
+                        //Entity childbilllandmark = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_landmarkifany"));
+                        //Entity childbillstreet = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_street"));
+
+                        tracingService.Trace("In Bill TO and Ship to Variables");
+                        if (SAF.Attributes.Contains("onl_cityonl"))
+                        {
+                            Entity city = service.Retrieve("alletech_city", SAF.GetAttributeValue<EntityReference>("onl_cityonl").Id, new ColumnSet("alletech_cityno"));
+                            billCityId = city.GetAttributeValue<String>("alletech_cityno");
+                            billCityId = string.IsNullOrWhiteSpace(billCityId) ? "0" : billCityId;
+                        }
+                        if (SAF.Attributes.Contains("onl_buildingnoplotnoonl"))
+                        {
+                            billToplotno = SAF.GetAttributeValue<string>("onl_buildingnoplotnoonl");
+                            billToplotno = billToplotno + ", ";
+                        }
+                        if (SAF.Attributes.Contains("onl_floor"))
+                        {
+
+                            billTofloor = SAF.GetAttributeValue<string>("onl_floor");
+                            billTofloor = billTofloor + ", ";
+                            billTofloor = "Floor - " + billTofloor;
+                        }
+                        if (SAF.Attributes.Contains("onl_buildingnameonl"))
+                        {
+
+                            if (SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_specifybuildingonl"))
+                            {
+                                billTobuildingname = SAF.GetAttributeValue<string>("onl_specifybuildingonl");
+                                billTobuildingname = billTobuildingname + ", ";
+                            }
+                            else if (SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name.ToLower() != "other")
+                            {
+                                billTobuildingname = SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name;
+                                billTobuildingname = billTobuildingname + ", ";
+                            }
+                        }
+                        if (SAF.Attributes.Contains("onl_areaonl"))
+                        {
+                            if (SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_specifyareaonl"))
+                            {
+                                billtoarea = SAF.GetAttributeValue<string>("onl_specifyareaonl");
+                                billtoarea = billtoarea + ", ";
+                            }
+                            else if (SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name.ToLower() != "other")
+                            {
+                                billtoarea = SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name;
+                                billtoarea = billtoarea + ", ";
+                            }
+                        }
+                        if (SAF.Attributes.Contains("onl_landmarkifany"))
+                        {
+                            billTolandmark = SAF.GetAttributeValue<string>("onl_landmarkifany");
+                        }
+
+                        if (SAF.Attributes.Contains("onl_street"))
+                        {
+                            billToStreet = SAF.GetAttributeValue<String>("onl_street");
+                            billToStreet = billToStreet + ", ";
+                        }
+
+                        billtostreetcomplete = billToplotno + billTofloor + billTobuildingname + billToStreet + billtoarea + billTolandmark;
+
+
+                        //Entity childbillpincode = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_pincode"));
+                        if (SAF.Attributes.Contains("onl_pincode"))
+                        {
+                            billToPincode = SAF.GetAttributeValue<string>("onl_pincode").Replace(" ", "");
+                        }
+
+                        //Entity childbillstate = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_stateonl"));
+                        if (SAF.Attributes.Contains("onl_stateonl"))
+                        {
+                            Entity state = service.Retrieve("alletech_state", SAF.GetAttributeValue<EntityReference>("onl_stateonl").Id, new ColumnSet("alletech_statename"));
+                            billToState = state.GetAttributeValue<String>("alletech_statename");
+                        }
+                        //Entity childsepectrapincode = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_pincode"));
+                        if (SAF.Attributes.Contains("onl_spectra_pincode"))
+                            shipToPincode = SAF.GetAttributeValue<String>("onl_spectra_pincode").Replace(" ", "");
+
+
+                        //Entity childsepectrastate = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_state"));
+                        if (SAF.Attributes.Contains("onl_spectra_state"))
+                        {
+                            Entity state = service.Retrieve("alletech_state", SAF.GetAttributeValue<EntityReference>("onl_spectra_state").Id, new ColumnSet("alletech_statename"));
+                            shipToState = state.GetAttributeValue<String>("alletech_statename");
+                        }
+                        #endregion
+
+                        #region Parent Account record 
+
+                        //Entity childSpectrabuidingplot = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_buildingnoplotno"));
+                        //Entity childspectrafloor = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_floor"));
+                        //Entity childspectrabuildingname = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_buildingname"));
+                        //Entity childspectraspecifybuilding = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_specifybuilding"));
+                        //Entity childspectraarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_area"));
+                        //Entity childspectraspecifyarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_specifyarea"));
+                        //Entity childspectralandmark = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_landmark"));
+                        //Entity childspectrastreet = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_street"));
+                        //Entity childspectrablock = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_block"));
+
+                        tracingService.Trace("After Billing street");
+
+                        #region Concatenated Street Shipping
+                        if (SAF.Attributes.Contains("onl_spectra_buildingnoplotno"))
+                        {
+                            shipToplotno = SAF.GetAttributeValue<string>("onl_spectra_buildingnoplotno");
+                            shipToplotno = shipToplotno + ", ";
+                        }
+                        if (SAF.Attributes.Contains("onl_spectra_floor"))
+                        {
+                            shipTofloor = SAF.GetAttributeValue<string>("onl_spectra_floor");
+                            shipTofloor = "Floor - " + shipTofloor + ", ";
+                        }
+                        if (SAF.Attributes.Contains("onl_spectra_buildingname"))
+                        {
+                            if (SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_spectra_specifybuilding"))
+                            {
+                                shipTobuildingname = SAF.GetAttributeValue<string>("onl_spectra_specifybuilding");
+                                shipTobuildingname = shipTobuildingname + ", ";
+                            }
+                            else if (SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Name.ToLower() != "other")
+                            {
+                                shipTobuildingname = SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Name;
+                                shipTobuildingname = shipTobuildingname + ", ";
+                            }
+                        }
+                        if (SAF.Attributes.Contains("onl_spectra_area"))
+                        {
+                            if (SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Name.ToLower() == "other" && SAF.Attributes.Contains("onl_spectra_specifyarea"))
+                            {
+                                shiptoarea = SAF.GetAttributeValue<string>("onl_spectra_specifyarea");
+                                shiptoarea = shiptoarea + ", ";
+                            }
+                            else if (SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Name.ToLower() != "other")
+                            {
+                                shiptoarea = SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Name;
+                                shiptoarea = shiptoarea + ", ";
+                            }
+                        }
+                        if (SAF.Attributes.Contains("onl_spectra_landmark"))
+                        {
+                            shipTolandmark = SAF.GetAttributeValue<string>("onl_spectra_landmark");
+                        }
+                        if (SAF.Attributes.Contains("onl_spectra_block"))
+                        {
+                            shipToblock = SAF.GetAttributeValue<string>("onl_spectra_block");
+                            shipToblock = "block- " + shipToblock + ", ";
+                        }
+
+                        if (SAF.Attributes.Contains("onl_spectra_street"))
+                        {
+                            shipToStreet = SAF.GetAttributeValue<String>("onl_spectra_street");
+                            shipToStreet = shipToStreet + ", ";
+                        }
+
+                        shiptostreetcomplete = shipToplotno + shipTofloor + shipToblock + shipTobuildingname + shipToStreet + shiptoarea + shipTolandmark;
+                        #endregion
+                        if (shiptostreetcomplete != null)
+                        {
+                            EndB = true;
+                        }
+                        //Entity childspectracity = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_city"));
+                        if (SAF.Attributes.Contains("onl_spectra_city"))
+                        {
+                            Entity city = service.Retrieve("alletech_city", SAF.GetAttributeValue<EntityReference>("onl_spectra_city").Id, new ColumnSet("alletech_cityno"));
+                            ShipCityId = city.GetAttributeValue<String>("alletech_cityno");
+                        }
+
+                        #endregion
+
+                        #region Reevenue group Entity record
+                        QueryExpression queryConfig = new QueryExpression("alletech_revenuegroup");
+                        queryConfig.ColumnSet = new ColumnSet(true);
+                        queryConfig.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
+                        queryConfig.Criteria.AddCondition("alletech_name", ConditionOperator.Equal, cityname);
+                        EntityCollection RevenuegroupCollection = service.RetrieveMultiple(queryConfig);
+
+                        Entity Rev = RevenuegroupCollection.Entities[0];
+                        if (RevenuegroupCollection.Entities.Count > 0)
+                        {
+                            // Entity Rev = RevenuegroupCollection.Entities[0]; 
+                            if (Rev.Attributes.Contains("alletech_id"))
+                            {
+                                CafInsCityRevGrpId = Rev.GetAttributeValue<string>("alletech_id");
+                            }
+                            if (Rev.Attributes.Contains("alletech_revenuecoagroupid"))
+                            {
+                                coaGroupNo = Rev.GetAttributeValue<int>("alletech_revenuecoagroupid").ToString();
+                            }
+                            if (Rev.Attributes.Contains("alletech_coano"))
+                            {
+                                coaNo = Rev.GetAttributeValue<int>("alletech_coano").ToString();
+                            }
+                            if (Rev.Attributes.Contains("alletech_ledgerbookno"))
+                            {
+                                ledgerBookNo = Rev.GetAttributeValue<int>("alletech_ledgerbookno").ToString();
+                            }
+                            if (Rev.Attributes.Contains("alletech_ledgerparentid"))
+                            {
+                                ledgerParentId = Rev.GetAttributeValue<int>("alletech_ledgerparentid").ToString();
+                            }
+
+                            if (Rev.Attributes.Contains("alletech_placeofconsumptionid"))
+                            {
+                                placeOfConsumptionId = Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString();
+
+                            }
+                            if (Rev.Attributes.Contains("alletech_receiptledgeraccountno"))
+                            {
+                                receiptLedgerAccountNo = Rev.GetAttributeValue<int>("alletech_receiptledgeraccountno").ToString();
+                            }
+                            //throw new InvalidPluginExecutionException("sd:-" + placeOfConsumptionId.ToString());
+                        }
+                        #endregion
+                        //payment fields start
+
+                        #region payment mode type and bank details
+
+                        Entity cafPayment1 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_payinslip"));
+
+
+                        EntityReference cafPayment = cafPayment1.GetAttributeValue<EntityReference>("onl_payinslip");
+
+
+                        Entity payment = service.Retrieve("alletech_payment", cafPayment.Id, new ColumnSet(true));
+
+
+                        if (payment.Attributes.Contains("alletech_paymentmodetype"))
+                        {
+                            // Payment Mode== CASH
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(10)))
+                            {
+
+                                paymentType = "unify.finance.instrument.type.cash";
+
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                if (payment.Attributes.Contains("alletech_paymentdate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+                            }
+                            //Payment Mode== CHEQUE
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(1)))
+                            {
+                                paymentType = "unify.finance.instrument.type.cheque";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                if (payment.Attributes.Contains("alletech_chequeddno"))
+                                    chequeNo = payment.GetAttributeValue<string>("alletech_chequeddno");
+                                if (payment.Attributes.Contains("alletech_chequeddissuedate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_chequeddissuedate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+
+                                EntityReference bankname = payment.GetAttributeValue<EntityReference>("alletech_banknameid");
+                                Entity _bank = service.Retrieve("alletech_bank", bankname.Id, new ColumnSet("alletech_banknameid"));
+                                if (_bank.Attributes.Contains("alletech_banknameid"))
+                                {
+                                    bankNo = _bank.GetAttributeValue<Int32>("alletech_banknameid");
+                                }
+                                if (payment.Attributes.Contains("alletech_branch"))
+                                    banBranch = payment.GetAttributeValue<string>("alletech_branch");
+
+                            }
+                            //Payment Mode== CREDIT CARD
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(7)))
+                            {
+                                paymentType = "unify.finance.instrument.type.creditCard";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                if (payment.Attributes.Contains("alletech_refrenceid"))
+                                    approvalcodecredit = payment.GetAttributeValue<string>("alletech_refrenceid");
+                                if (payment.Attributes.Contains("alletech_creditcardlast4digitno"))
+                                    creditcardno = payment.GetAttributeValue<string>("alletech_creditcardlast4digitno");
+
+                                chequeNo = approvalcodecredit + " - " + creditcardno;
+
+                                //if (payment.Attributes.Contains("alletech_paymentdate"))
+                                if (payment.Attributes.Contains("alletech_paymentdate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+                            }
+
+
+                            //Payment Mode== DEBIT CARD
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(8)))
+                            {
+                                paymentType = "unify.finance.instrument.type.debitCard";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                if (payment.Attributes.Contains("alletech_debitcardapprovalcode"))
+                                    approvalcodedebit = payment.GetAttributeValue<string>("alletech_debitcardapprovalcode");
+                                if (payment.Attributes.Contains("alletech_debitcardlast4digitno"))
+                                    debitcardno = payment.GetAttributeValue<string>("alletech_debitcardlast4digitno");
+
+                                chequeNo = approvalcodedebit + " - " + debitcardno;
+
+                                //if (payment.Attributes.Contains("alletech_paymentdate"))
+                                if (payment.Attributes.Contains("alletech_paymentdate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+                            }
+
+                            //Payment Mode== DD
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(2)))
+                            {
+                                paymentType = "unify.finance.instrument.type.demanddraft";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                if (payment.Attributes.Contains("alletech_chequeddno"))
+                                    chequeNo = payment.GetAttributeValue<string>("alletech_chequeddno");
+                                if (payment.Attributes.Contains("alletech_chequeddissuedate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_chequeddissuedate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+
+                                EntityReference bankname = payment.GetAttributeValue<EntityReference>("alletech_banknameid");
+                                Entity _bank = service.Retrieve("alletech_bank", bankname.Id, new ColumnSet("alletech_banknameid"));
+                                if (_bank.Attributes.Contains("alletech_banknameid"))
+                                {
+                                    bankNo = _bank.GetAttributeValue<Int32>("alletech_banknameid");
+
+                                }
+                                if (payment.Attributes.Contains("alletech_branch"))
+                                    banBranch = payment.GetAttributeValue<string>("alletech_branch");
+
+                            }
+
+                            //Payment Mode== RTGS
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(5)))
+                            {
+                                paymentType = "unify.finance.instrument.type.rtgs";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_transactionreferenceid"))
+                                    chequeNo = payment.GetAttributeValue<string>("alletech_transactionreferenceid");
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                //if (payment.Attributes.Contains("alletech_paymentdate"))
+                                if (payment.Attributes.Contains("alletech_paymentdate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+                            }
+
+                            //Payment Mode== NEFT
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(4)))
+                            {
+                                paymentType = "unify.finance.instrument.type.neft";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_transactionreferenceid"))
+                                    chequeNo = payment.GetAttributeValue<string>("alletech_transactionreferenceid");
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                // if (payment.Attributes.Contains("alletech_paymentdate"))
+                                if (payment.Attributes.Contains("alletech_paymentdate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+                            }
+
+                            //Paymentmode == EZETAP
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(11)))
+                            {
+                                paymentType = "unify.finance.instrument.type.ezetap";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_transactionreferenceid"))
+                                    chequeNo = payment.GetAttributeValue<string>("alletech_transactionreferenceid");
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                // if (payment.Attributes.Contains("alletech_paymentdate"))
+                                if (payment.Attributes.Contains("alletech_paymentdate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_paymentdate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+                            }
+
+                            //Paymentmode == EZETAP - CHEQUE
+                            if (payment.GetAttributeValue<OptionSetValue>("alletech_paymentmodetype").Equals(new OptionSetValue(12)))
+                            {
+                                paymentType = "unify.finance.instrument.type.ezetapcheque";
+                                if (payment.Attributes.Contains("alletech_amount"))
+                                    payamt = payment.GetAttributeValue<Money>("alletech_amount").Value;
+                                if (payment.Attributes.Contains("alletech_securitydepositifapplicable"))
+                                    securityAmount = payment.GetAttributeValue<string>("alletech_securitydepositifapplicable");
+
+                                if (payment.Attributes.Contains("alletech_securitydeposittype"))
+                                    securityDepositType = payment.GetAttributeValue<OptionSetValue>("alletech_securitydeposittype").Value.ToString();
+
+                                if (payment.Attributes.Contains("alletech_chequeddno"))
+                                    chequeNo = payment.GetAttributeValue<string>("alletech_chequeddno");
+                                if (payment.Attributes.Contains("alletech_chequeddissuedate"))
+                                    paymentDateString = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(payment.Attributes["alletech_chequeddissuedate"]), TimeZoneInfo.Local);//payment.GetAttributeValue<DateTime>("alletech_paymentdate").AddHours(5).AddMinutes(30).ToShortDateString();
+                                paymentDate = DateFormater(paymentDateString);
+
+                                EntityReference bankname = payment.GetAttributeValue<EntityReference>("alletech_banknameid");
+                                Entity _bank = service.Retrieve("alletech_bank", bankname.Id, new ColumnSet("alletech_banknameid"));
+                                if (_bank.Attributes.Contains("alletech_banknameid"))
+                                    bankNo = _bank.GetAttributeValue<Int32>("alletech_banknameid");
+
+                                if (payment.Attributes.Contains("alletech_branch"))
+                                    banBranch = payment.GetAttributeValue<string>("alletech_branch");
+                            }
+                        }
+
+                        #endregion
+
+                        //payment fields end
+
+                        if (SAF.Attributes.Contains("onl_contactpersonname2"))
+                            billingContactfirst = SAF.GetAttributeValue<String>("onl_contactpersonname2");
+
+                        string[] ssize = billingContactfirst.Split(null);
+                        if (ssize.Length > 1)
+                        {
+                            firstnameAccShip = ssize[0];
+                            for (int k = 1; k < ssize.Length; k++)
+                            {
+                                lastName = lastName + " " + ssize[k];
+                            }
+                        }
+                        else
+                            firstnameAccShip = ssize[0];
+
+                        //#region Constructing Request XML
+
+                        #region IP Address of Machine
+
+                        //IPHostEntry host;
+
+                        //host = Dns.GetHostEntry(Dns.GetHostName());
+                        //foreach (IPAddress ip in host.AddressList)
+                        //{
+                        //    if (ip.AddressFamily == AddressFamily.InterNetwork)
+                        //    {
+                        //        localIP = ip.ToString();
+                        //        break;
+                        //    }
+                        //}
+                        #endregion
+                        if (!SAF.Attributes.Contains("onl_parentaccountonl"))
+                        {
+                            #region Without Parent Account
+                            bool flag = false;
+                            // Check total no of Opportunity Sites  
+                            QueryExpression querycustomersite = new QueryExpression();
+                            querycustomersite.EntityName = "onl_customersite";
+                            querycustomersite.ColumnSet = new ColumnSet(true);
+                            querycustomersite.Criteria.AddCondition("onl_opportunityidid", ConditionOperator.Equal, opportunityid);
+                            EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
+                            decimal Sitecount = resultcustomersite.Entities.Count;
+                            //Payment Amount Divided by Total no of Sites
+                            paymentAmount = (payamt / Sitecount).ToString();
+                            //Security Amount Divided by Total  no of Sites
+                            if (securityAmount != null && securityAmount != string.Empty)
+                                securityAmount = (decimal.Parse(securityAmount) / Sitecount).ToString();
+
+                            int rowcount = 1;
+                            foreach (Entity entity in resultcustomersite.Entities)
+                            {
+                                if (rowcount > 1)
+                                {
+                                    //get unify Account no
+                                    parentno = GetParentNo(service, CanNo);
+
+                                    string CreateSiteAccount = "CreateSiteAccount";
+                                    //Generate Account Based on Site Id 
+                                   CanNo= ParentAccountSitesCreation(service, ref SAF, opportunityid, context, rowcount, childshortname, CreateSiteAccount);
+                                    //Get Account Created Id
+                                    //CanNo = GetAccountNo(service, NewAccountid);
+                                }
+                                #region getting site details
+                                var sitename = entity.GetAttributeValue<String>("spectra_customername");
+
+                                string[] ssizefullnmae = sitename.Split(null);
+                                if (ssizefullnmae.Length > 1)
+                                {
+                                    firstName = ssizefullnmae[0];
+                                    for (int k = 1; k < ssizefullnmae.Length; k++)
+                                    {
+                                        lastnameAccShip = lastnameAccShip + " " + ssizefullnmae[k];
+                                    }
+                                }
+                                else
+                                    firstName = ssizefullnmae[0];
+
+                                #endregion
+
+                                #region start xml  
+                                requestXml = "";
+                                requestXml += "<CRMCAFRequest>" +
+                                "<CAF_No>" + SafNo + "</CAF_No>" +
+                                "<CAN_No>" + CanNo + "</CAN_No>";
+                                if (rowcount == 1)
+                                {
+
+
+                                    #region OrganisationRequest
+                                    requestXml += "<OrganisationRequest>" +
+                                    "<customer>true</customer>" +
+                                    "<domain>" + childDomainId + "</domain>" +
+                                    "<name>" + childName + "</name>" +
+                                    "<shortName>" + paccshort + "</shortName>" +
+                                    "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
+                                    "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
+                                    "<societyName>" + Buildingname + "</societyName>" +
+                                    "<areaName>" + areaname + "</areaName>" +
+                                    "<societyFieldId>2</societyFieldId>" +
+                                    "<areaFieldId>3</areaFieldId>" +
+                                    "<productSegmentNo>6</productSegmentNo>" +
+                                    "<verticalSegmentNo>8</verticalSegmentNo>" +
+                                    "<industryTypeNo>22</industryTypeNo>" +
+                                    "</OrganisationRequest>";
+                                    #endregion
+
+
+                                    requestXml += "<ChildOrganisationRequest>" +
+                                    "<customer>true</customer>" +
+                                    "<domain>" + childDomainId + "</domain>" +
+                                    "<name>" + childName + "</name>" +
+                                    "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
+                                    "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
+                                    "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
+                                    "<societyName>" + Buildingname + "</societyName>" +
+                                    "<areaName>" + areaname + "</areaName>" +
+                                    "<societyFieldId>2</societyFieldId>" +
+                                    "<areaFieldId>3</areaFieldId>" +
+                                    "<productSegmentNo>6</productSegmentNo>" +
+                                    "<verticalSegmentNo>8</verticalSegmentNo>" +
+                                    "<industryTypeNo>22</industryTypeNo>" +
+                                    "</ChildOrganisationRequest>";
+                                }
+                                else
+                                {
+
+
+                                    requestXml += "<ChildOrganisationRequest>" +
+                                    "<customer>true</customer>" +
+                                    "<domain>" + childDomainId + "</domain>" +
+                                    "<name>" + childName + "</name>" +
+                                    "<parentNo>" + parentno + "</parentNo>" +
+                                    "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
+                                    "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
+                                    "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
+                                    "<societyName>" + Buildingname + "</societyName>" +
+                                    "<areaName>" + areaname + "</areaName>" +
+                                    "<societyFieldId>2</societyFieldId>" +
+                                    "<areaFieldId>3</areaFieldId>" +
+                                    "<productSegmentNo>6</productSegmentNo>" +
+                                    "<verticalSegmentNo>8</verticalSegmentNo>" +
+                                    "<industryTypeNo>22</industryTypeNo>" +
+                                    "</ChildOrganisationRequest>";
+                                }
+                                #region Contact details
+
+                                #region Billing
+                                requestXml += "<ContactDetails>" +
+                                "<cityNo>" + billCityId + "</cityNo>" +
+                                "<contactTypeNo>1</contactTypeNo>" +
+                                "<firstName>" + firstnameAccShip + "</firstName>";
+                                if (!String.IsNullOrEmpty(lastName))
+                                    requestXml = requestXml + "<lastName>" + lastName + "</lastName>";
+                                requestXml += "<salutationNo>" + salutation + "</salutationNo>" +
+                                "<pin>" + billToPincode + "</pin>" +
+                                "<state>" + billToState + "</state>" +
+                                "<street>" + billtostreetcomplete + "</street>" +
+                                "</ContactDetails>" +
+                                #endregion
+
+                                #region  Shipping Address
+                            "<ContactDetails>" +
+                               "<cityNo>" + billCityId + "</cityNo>" +
+                                "<contactTypeNo>2</contactTypeNo>" +
+                                "<firstName>" + firstName + "</firstName>";
+
+                                if (!String.IsNullOrEmpty(lastnameAccShip))
+                                    requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
+
+                                requestXml = requestXml +
+                                "<salutationNo>" + salutation + "</salutationNo>" +
+                                "<pin>" + shipToPincode + "</pin>" +
+                                "<state>" + shipToState + "</state>" +
+                                "<street>" + shiptostreetcomplete + "</street>" +
+                                "</ContactDetails>";
+                                #endregion
+
+                                #endregion
+
+                                //#region if MAC or CAC same state
+                                //if (EndB)
+                                //{
+                                //    requestXml = requestXml + "<ContactDetails>" +                     //End A Address
+                                //"<cityNo>" + ShipCityId + "</cityNo>" +
+                                //"<contactTypeNo>8</contactTypeNo>" +
+                                //"<firstName>" + firstnameAccShip + "</firstName>";
+
+                                //    if (!String.IsNullOrEmpty(lastnameAccShip))
+                                //        requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
+
+                                //    requestXml = requestXml +
+                                //    "<salutationNo>" + salutation + "</salutationNo>" +
+                                //    "<pin>" + shipToPincode + "</pin>" +
+                                //    "<state>" + shipToState + "</state>" +
+                                //    "<street>" + shiptostreetcomplete + "</street>" +
+                                //    "</ContactDetails>";
+                                //    //}
+                                //    //if (!String.IsNullOrEmpty(iabAddress))  //  installation address B (P2P Address)
+                                //    //{
+                                //    requestXml = requestXml + "<ContactDetails>" +
+                                //    "<cityNo>" + billCityId + "</cityNo>" +
+                                //    "<contactTypeNo>9</contactTypeNo>" +
+                                //    "<firstName>" + firstnameAccShip + "</firstName>";
+
+                                //    //if (!String.IsNullOrEmpty(iabContactLastName))
+                                //    requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
+
+                                //    requestXml = requestXml +
+                                //   "<salutationNo>" + salutation + "</salutationNo>" +
+                                //   "<pin>" + shipToPincode + "</pin>" +
+                                //   "<state>" + shipToState + "</state>" +
+                                //   "<street>" + billtostreetcomplete + "</street>" +
+                                //   "</ContactDetails>";
+                                //}
+                                //#endregion
+
+                                #region Bill  to communication
+                                if (Email != null)
+                                {
+                                    requestXml = requestXml + "<commMode>" +
+                                    "<commTypeNo>4</commTypeNo>" +
+                                    //"<contactNo></contactNo>" +     //  ----- bill email
+                                    "<isDefault>false</isDefault>" +
+                                    "<dnc>false</dnc>" +
+                                    "<ident>" + Email + "</ident>" +
+                                    "<contactType>BillTo</contactType>" +
+                                    "</commMode>";
+                                }
+
+                                if (Mobile != "")
+                                {
+                                    requestXml = requestXml +
+                                    "<commMode>" + "<commTypeNo>2</commTypeNo>" +
+                                    // "<contactNo></contactNo>" +     //  ----- bill phone
+                                    "<isDefault>false</isDefault>" +
+                                    "<dnc>false</dnc>" +
+                                    "<ident>" + Mobile + "</ident>" +
+                                    "<contactType>BillTo</contactType>" +
+                                    "</commMode>";
+                                }
+
+                                if (Facebook != "")
+                                {
+                                    requestXml = requestXml +
+                                    "<commMode>" +
+                                    "<commTypeNo>8</commTypeNo>" +
+                                    //"<contactNo></contactNo>" +     //  ----- bill to fb
+                                    "<isDefault>false</isDefault>" +
+                                    "<dnc>false</dnc>" +
+                                    "<ident>" + Facebook + "</ident>" +
+                                    "<contactType>BillTo</contactType>" +
+                                    "</commMode>";
+                                }
+
+                                if (Twitter != "")
+                                {
+                                    requestXml = requestXml +
+                                    "<commMode>" +
+                                    "<commTypeNo>7</commTypeNo>" +
+                                    //"<contactNo></contactNo>" +     //  ----- bill to twitter
+                                    "<isDefault>false</isDefault>" +
+                                    "<dnc>false</dnc>" +
+                                    "<ident>" + Twitter + "</ident>" +
+                                    "<contactType>BillTo</contactType>" +
+                                    "</commMode>";
+                                }
+                                #endregion
+
+                                #region Ship to communication
+                                if (Email != "")
+                                {
+                                    requestXml = requestXml +
+                                    "<commMode>" +
+                                    "<commTypeNo>4</commTypeNo>" +
+                                    //"<contactNo></contactNo>" +     //  ----- ship to email
+                                    "<isDefault>false</isDefault>" +
+                                    "<dnc>false</dnc>" +
+                                    "<ident>" + entity.GetAttributeValue<String>("onl_customeremailaddress") + "</ident>" +
+                                    "<contactType>ShipTo</contactType>" +
+                                    "</commMode>";
+                                }
+
+                                if (Mobile != "")
+                                {
+                                    requestXml = requestXml +
+                                    "<commMode>" +
+                                    "<commTypeNo>2</commTypeNo>" +
+                                    //"<contactNo></contactNo>" +     //  ----- ship to phone
+                                    "<isDefault>false</isDefault>" +
+                                    "<dnc>false</dnc>" +
+                                    "<ident>" + entity.GetAttributeValue<String>("onl_ol_customercontactnumber") + "</ident>" +
+                                    "<contactType>ShipTo</contactType>" +
+                                    "</commMode>";
+                                }
+                                #endregion
+
+                                //#region MAC and CAC Same state
+                                //if (EndB)
+                                //{
+                                //    if (Email != "")
+                                //    {
+                                //        requestXml = requestXml +
+                                //        "<commMode>" +
+                                //        "<commTypeNo>4</commTypeNo>" +
+                                //        "<isDefault>false</isDefault>" +
+                                //        "<dnc>false</dnc>" +
+                                //        "<ident>" + Email + "</ident>" +
+                                //        "<contactType>EndA</contactType>" +
+                                //        "</commMode>";
+                                //    }
+
+                                //    if (Mobile != "")
+                                //    {
+                                //        requestXml = requestXml +
+                                //        "<commMode>" +
+                                //        "<commTypeNo>2</commTypeNo>" +
+                                //        "<isDefault>false</isDefault>" +
+                                //        "<dnc>false</dnc>" +
+                                //        "<ident>" + Mobile + "</ident>" +
+                                //        "<contactType>EndA</contactType>" +
+                                //        "</commMode>";
+                                //    }
+
+                                //    if (!String.IsNullOrEmpty(Email))  //  ----- End B to email
+                                //    {
+                                //        requestXml = requestXml +
+                                //        "<commMode>" +
+                                //        "<commTypeNo>4</commTypeNo>" +
+                                //        // "<contactNo></contactNo>" +
+                                //        "<isDefault>false</isDefault>" +
+                                //        "<dnc>false</dnc>" +
+                                //        "<ident>" + Email + "</ident>" +
+                                //        "<contactType>EndB</contactType>" +
+                                //        "</commMode>";
+                                //    }
+
+                                //    if (!String.IsNullOrEmpty(Mobile)) //  ----- End B to phone
+                                //    {
+                                //        requestXml = requestXml +
+                                //        "<commMode>" +
+                                //        "<commTypeNo>2</commTypeNo>" +
+                                //        // "<contactNo></contactNo>" +
+                                //        "<isDefault>false</isDefault>" +
+                                //        "<dnc>false</dnc>" +
+                                //        "<ident>" + Mobile + "</ident>" +
+                                //        "<contactType>EndB</contactType>" +
+                                //        "</commMode>";
+                                //    }
+                                //}
+                                //#endregion
+
+                                #region Ledger request 
+                                requestXml = requestXml +
+                                "<LedgerRequest>" +
+                                "<coaGroupNo>" + coaGroupNo + "</coaGroupNo>" +
+                                "<coaNo>" + coaNo + "</coaNo>" +
+                                "<currencyISO>INR</currencyISO>" +
+                                "<ledgerAccountTypeNo>3</ledgerAccountTypeNo>" +
+                                "<ledgerBookNo>" + ledgerBookNo + "</ledgerBookNo>" +
+                                "<name>" + childName + "</name>" +
+                                "<parentId>" + ledgerParentId + "</parentId>" +
+
+                                "<paymentAmnt>" + paymentAmount + "</paymentAmnt>" +
+                                "<securityAmnt>" + securityAmount + "</securityAmnt>" +
+                                "<paymentType>" + paymentType + "</paymentType>" +
+                                "<depositType>" + securityDepositType + "</depositType>" +
+                                "<paymentDate>" + paymentDate + "</paymentDate>" +
+                                "<chequeNo>" + chequeNo + "</chequeNo>" +
+                                "<bankNo>" + bankNo + "</bankNo>" +
+                                "<bankBranch>" + banBranch + "</bankBranch>" +
+                                "<gst>" + Gst + "</gst>" +
+                                "<pan>" + Pan + "</pan>" +
+                                "<tan>" + Tan + "</tan>" +
+                                "</LedgerRequest>" +
+                                #endregion
+
+                                #region serviceGroup 
+                    "<serviceGroup>" +
+                                "<actcat>2</actcat>" +
+                                "<actid>" + CanNo + "</actid>" +
+                                "<actname>" + childName + "</actname>" +
+                                "<domno>" + childDomainId + "</domno>" +
+                                "<placeOfConsumptionId>" + Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString() + "</placeOfConsumptionId>" +
+                                "</serviceGroup>" +
+                                #endregion
+
+                                #region SessionObject
+                    "<SessionObject>" +
+                                "<credentialId>1</credentialId>" +
+                                "<ipAddress>22.23.25.12</ipAddress>" +
+                                "<source>CRM</source>" +
+                                "<userName>crm.admin</userName>" +
+                                "<userType>123</userType>" +
+                                "<usrNo>10651</usrNo>" +
+                                "</SessionObject>" +
+                                "</CRMCAFRequest>";
+                                #endregion
+
+
+                                if (requestXml.Contains("&"))
+                                {
+                                    requestXml = requestXml.Replace("&", "&amp;");
+                                }
+
+
+                                var B2Buri = new Uri("http://jbossuat.spectranet.in:9001/rest/getCustomer/");
+                                var uri = B2Buri;
+
+                                Byte[] requestByte = Encoding.UTF8.GetBytes(requestXml);
+
+                                WebRequest request = WebRequest.Create(uri);
+                                request.Method = WebRequestMethods.Http.Post;
+                                request.ContentLength = requestByte.Length;
+                                request.ContentType = "text/xml; encoding='utf-8'";
+                                request.GetRequestStream().Write(requestByte, 0, requestByte.Length);
+
+                                // 
+                                #region Response validation
+                                try
+                                {
+                                    if (context.Depth == 1)
+                                    {
+                                        using (var response = request.GetResponse())
+                                        {
+                                            XmlDocument xmlDoc = new XmlDocument();
+                                            xmlDoc.Load(response.GetResponseStream());
+                                            string tmp = xmlDoc.InnerXml.ToString();
+
+                                            string CAF_No, CAN_No, Code, Message;
+                                            #region To create Integration Log from Response
+                                            XmlNodeList node1 = xmlDoc.GetElementsByTagName("CRMCAFResponse");
+                                            for (int i = 0; i <= node1.Count - 1; i++)
+                                            {
+                                                CAF_No = node1[i].ChildNodes.Item(0).InnerText.Trim();
+                                                CAN_No = node1[i].ChildNodes.Item(1).InnerText.Trim();
+                                                Code = node1[i].ChildNodes.Item(2).InnerText.Trim();
+                                                Message = node1[i].ChildNodes.Item(3).InnerText.Trim();
+                                                Entity IntegrationLog = new Entity("alletech_integrationlog_enterprise");
+                                                IntegrationLog["alletech_cafno"] = CAF_No;
+                                                IntegrationLog["alletech_canno"] = CAN_No;
+                                                IntegrationLog["alletech_code"] = Code;
+                                                IntegrationLog["alletech_message"] = Message;
+
+                                                IntegrationLog["alletech_name"] = "Approved_" + CAF_No + "_" + CAN_No;
+
+                                                IntegrationLog["alletech_responsetype"] = new OptionSetValue(2);
+                                                IntegrationLog["alletech_approvalrequest"] = requestXml;
+                                                Guid Siteguid = entity.Id;
+                                                Guid safid = SAF.Id;
+                                                //add site lookup 
+                                                IntegrationLog["spectra_siteidid"] = new EntityReference("onl_customersite", Siteguid);
+                                                // IntegrationLog["alletech_can"] = new EntityReference("onl_saf", SAF.Id);
+                                                IntegrationLog["onl_safid"] = new EntityReference("onl_saf", safid);
+                                                service.Create(IntegrationLog);
+                                                flag = true;
+                                            }
+                                            #endregion
+                                        }
+                                        if (flag == true)
+                                        {
+                                            #region Update Customer Site Details 
+                                            Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_parentaccout", "spectra_siteaccountno", "spectra_siteresponse", "spectra_siteuserpassword"));
+
+                                            ConditionExpression conditionacc = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, CanNo);
+                                            FilterExpression filteracc = new FilterExpression();
+                                            filteracc.AddCondition(conditionacc);
+                                            filteracc.FilterOperator = LogicalOperator.And;
+                                            QueryExpression queryacc = new QueryExpression
+                                            {
+                                                EntityName = "account",
+                                                ColumnSet = new ColumnSet("accountid"),
+                                                Criteria = filter,
+                                            };
+                                            EntityCollection childAccountC = service.RetrieveMultiple(queryacc);
+                                            if (childAccountC.Entities.Count == 0)
+                                                return;
+                                            Entity childPAccount = childAccountC.Entities[0];
+                                            Guid pacid = childPAccount.GetAttributeValue<Guid>("accountid");
+
+                                            Sites["spectra_parentaccout"] = new EntityReference("account", pacid);
+                                            Sites["spectra_siteaccountno"] = CanNo;
+                                            Sites["spectra_siteresponse"] = "true";
+                                            Sites["spectra_siteuserpassword"] = CreateRandomPasswordWithRandomLength(8);
+                                            service.Update(Sites);
+                                            #endregion
+                                        }
+                                        else
+                                        {
+                                            Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_siteaccountno", "spectra_siteresponse"));
+                                            Sites["spectra_siteaccountno"] = CanNo;
+                                            Sites["spectra_siteresponse"] = "false";
+                                            service.Update(Sites);
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    throw new InvalidPluginExecutionException(ex.Message);
+                                }
+                                #endregion
+                                #endregion
+                                rowcount++;
+                                System.Threading.Thread.Sleep(3000);
+                            }
+                            if (context.Depth == 1)
+                            {
+                                Entity _saf = new Entity("onl_saf");
+                                _saf.Id = SAF.Id;
+                                _saf["onl_status"] = new OptionSetValue(122050003);
+                                // _saf["onl_orgcreationresponseonl"] = true;
+                                service.Update(_saf);
+                            }
+                            #endregion
+                        }
+                        else
+                        {
+                            //New Sites Created 
+                        }
                     }
+                    //}
                 }
             }
             catch (Exception e)
@@ -1321,16 +1344,16 @@ namespace SAFCRMUnifyIntegration
             }
             return getAccno;
         }
-        public void ParentAccountCreation(IOrganizationService service, ref Entity SAF, Guid Oppid, IPluginExecutionContext context)
+        public void ParentAccountCreation(IOrganizationService service, ref Entity SAF, Guid Oppid, IPluginExecutionContext context, String canId)
         {
             if (context.Depth == 1)
             {
                 EntityReference childAccountDomain = null;
-                Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
-                String canId = String.Empty;
+                //Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
+                //String canId = String.Empty;
 
-                if (SAF.Attributes.Contains("onl_spectra_accountid"))
-                    canId = SAF.GetAttributeValue<String>("onl_spectra_accountid");
+                //if (SAF.Attributes.Contains("onl_spectra_accountid"))
+                //    canId = SAF.GetAttributeValue<String>("onl_spectra_accountid");
 
 
                 ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, canId);
@@ -1540,8 +1563,6 @@ namespace SAFCRMUnifyIntegration
                     Guid parentAccountId = service.Create(parentAccount);
 
                     CreateAccountId = parentAccountId;
-                   
-
 
                     // Parent Account Association at Child Account
                     Entity childAccount01 = service.Retrieve("account", childAccount.Id, new ColumnSet("parentaccountid"));
@@ -1555,16 +1576,17 @@ namespace SAFCRMUnifyIntegration
             }
 
         }
-        public void ParentAccountSitesCreation(IOrganizationService service, ref Entity SAF, Guid Oppid, IPluginExecutionContext context, int sitecount, string ushortname, string Trigger)
+        public String ParentAccountSitesCreation(IOrganizationService service, ref Entity SAF, Guid Oppid, IPluginExecutionContext context, int sitecount, string ushortname, string Trigger)
         {
+            string Account2 = string.Empty;
             if (context.Depth == 1)
             {
                 EntityReference childAccountDomain = null;
                 Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
                 String canId = String.Empty;
 
-                if (SAF.Attributes.Contains("onl_spectra_accountid"))
-                    canId = SAF.GetAttributeValue<String>("onl_spectra_accountid");
+                //if (SAF.Attributes.Contains("onl_spectra_accountid"))
+                //    canId = SAF.GetAttributeValue<String>("onl_spectra_accountid");
 
                 string Account = GetAccountNo(service, CreateAccountId);
 
@@ -1579,14 +1601,13 @@ namespace SAFCRMUnifyIntegration
                     Criteria = filter,
                 };
                 EntityCollection childAccountCollection = service.RetrieveMultiple(query);
-                if (childAccountCollection.Entities.Count == 0)
-                    return;
+              
                 Entity childAccount = childAccountCollection.Entities[0];
 
                 if (Trigger == "CreateSiteAccount")
                 {
                     // check if Parent account, existing on Child has Unify ID
-                    if (childAccount.Attributes.Contains("parentaccountid"))
+                    if (!childAccount.Attributes.Contains("parentaccountid"))
                     {
                         Entity parentAccount = new Entity("account");
 
@@ -1776,38 +1797,45 @@ namespace SAFCRMUnifyIntegration
 
                         Guid parentAccountId = service.Create(parentAccount);
 
-                        string Account2 = GetAccountNo(service, parentAccountId);
+
+                        NewAccountid = parentAccountId;
+                        Account2 = GetAccountNo(service, parentAccountId);
 
                         // Parent Account Association at Child Account
                         #region Parent Account update Shortname
 
-                        ConditionExpression ParentAccondition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Account2);
-                        FilterExpression Parentfilter = new FilterExpression();
-                        Parentfilter.AddCondition(ParentAccondition);
-                        Parentfilter.FilterOperator = LogicalOperator.And;
-                        QueryExpression query_parent = new QueryExpression
-                        {
-                            EntityName = "account",
-                            ColumnSet = new ColumnSet("parentaccountid", "alletech_unifyshortname"),
-                            Criteria = filter,
-                        };
-                        EntityCollection childPCollection = service.RetrieveMultiple(query_parent);
-                        if (childPCollection.Entities.Count == 0)
-                            return;
-                        Entity PAccount = childPCollection.Entities[0];
+                        //ConditionExpression ParentAccondition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Account2);
+                        //FilterExpression Parentfilter = new FilterExpression();
+                        //Parentfilter.AddCondition(ParentAccondition);
+                        //Parentfilter.FilterOperator = LogicalOperator.And;
+                        //QueryExpression query_parent = new QueryExpression
+                        //{
+                        //    EntityName = "account",
+                        //    ColumnSet = new ColumnSet("parentaccountid", "alletech_unifyshortname"),
+                        //    Criteria = filter,
+                        //};
+                        //EntityCollection childPCollection = service.RetrieveMultiple(query_parent);
 
-                        PAccount["parentaccountid"] = new EntityReference("account", CreateAccountId);
-                        PAccount["alletech_unifyshortname"] = ushortname + "-0" + sitecount;
-                        service.Update(PAccount);
+                        //Entity PAccount = childPCollection.Entities[0];
+                        //Guid parentid = childAccount.GetAttributeValue<EntityReference>("parentaccountid").Id;
+                        //if (childAccountDomain != null)
+                        //    childAccount01.Attributes["alletech_domain"] = childAccountDomain;
+                        Entity childAccount01 = service.Retrieve("account", childAccount.Id, new ColumnSet("parentaccountid", "alletech_unifyshortname"));
+
+                        childAccount01["parentaccountid"] = new EntityReference("account", parentAccountId);
+                        string paccshort = ushortname.Split('-')[0];
+                        childAccount01["alletech_unifyshortname"] = paccshort + "-0" + sitecount;
+                        service.Update(childAccount01);
                         #endregion
+                       
+
                         
-                        
-                        tracingService.Trace("After updating CHild with Parent account");
+
                     }
                 }
-                
-            }
 
+            }
+            return Account2;
         }
 
         public void ChildAccountUpdation(IOrganizationService service, Entity SAFID, Guid Oppid, IPluginExecutionContext context)
@@ -1815,8 +1843,8 @@ namespace SAFCRMUnifyIntegration
 
             try
             {
-                if (context.Depth == 1)
-                {
+                //if (context.Depth == 1)
+                //{
                     Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
 
                     var accountid = OppEntity.GetAttributeValue<String>("alletech_accountid");
@@ -1834,10 +1862,10 @@ namespace SAFCRMUnifyIntegration
                         Entity SAF = service.Retrieve("onl_saf", SAFID.Id, new ColumnSet(true));
 
                         #region To Bill Details
-                        if (SAF.Attributes.Contains("onl_contactpersonname"))
+                        if (SAF.Attributes.Contains("onl_contactpersonname2"))
                         {            //Billing information being sent to Child Account
-                            childAccount["alletech_contactname"] = SAF.GetAttributeValue<String>("onl_contactpersonname");
-                            tracingService.Trace("alletech_contactfirstname : " + SAF.GetAttributeValue<String>("onl_contactpersonname"));
+                            childAccount["alletech_contactname"] = SAF.GetAttributeValue<String>("onl_contactpersonname2");
+                            tracingService.Trace("alletech_contactfirstname : " + SAF.GetAttributeValue<String>("onl_contactpersonname2"));
                         }
 
                         if (SAF.Attributes.Contains("onl_emailid"))
@@ -2052,7 +2080,7 @@ namespace SAFCRMUnifyIntegration
                     {
                         throw new InvalidPluginExecutionException("Account Record Not Updated");
                     }
-                }
+                //}
             }
             catch (Exception e)
             {
@@ -2300,28 +2328,28 @@ namespace SAFCRMUnifyIntegration
 
                         //Get Parent Account -Account No 
                         #region Parent Account update Shortname
-                            ConditionExpression conditionParentAcc = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Accountno);
-                            FilterExpression filterParent = new FilterExpression();
-                            filterParent.AddCondition(conditionParentAcc);
-                            filterParent.FilterOperator = LogicalOperator.And;
-                            QueryExpression queryParent = new QueryExpression
-                            {
-                                EntityName = "account",
-                                ColumnSet = new ColumnSet("alletech_unifyshortname"),
-                                Criteria = filter,
-                            };
-                            EntityCollection ParentAccountCollection = service.RetrieveMultiple(queryParent);
-                            if (ParentAccountCollection.Entities.Count == 0)
-                                return;
-                            Entity ParentAccount = ParentAccountCollection.Entities[0];
-                            ParentAccount.Attributes["alletech_unifyshortname"] = prefix + finalcount;
+                        ConditionExpression conditionParentAcc = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Accountno);
+                        FilterExpression filterParent = new FilterExpression();
+                        filterParent.AddCondition(conditionParentAcc);
+                        filterParent.FilterOperator = LogicalOperator.And;
+                        QueryExpression queryParent = new QueryExpression
+                        {
+                            EntityName = "account",
+                            ColumnSet = new ColumnSet("alletech_unifyshortname"),
+                            Criteria = filter,
+                        };
+                        EntityCollection ParentAccountCollection = service.RetrieveMultiple(queryParent);
+                        if (ParentAccountCollection.Entities.Count == 0)
+                            return;
+                        Entity ParentAccount = ParentAccountCollection.Entities[0];
+                        ParentAccount.Attributes["alletech_unifyshortname"] = prefix + finalcount;
 
-                            service.Update(ParentAccount);
+                        service.Update(ParentAccount);
                         #endregion
 
                         #region Existing Account Update Shortname with -01
-                            childAccount.Attributes["alletech_unifyshortname"] = prefix + finalcount+"-01";
-                            service.Update(childAccount);
+                        childAccount.Attributes["alletech_unifyshortname"] = prefix + finalcount + "-01";
+                        service.Update(childAccount);
                         #endregion
 
                     }

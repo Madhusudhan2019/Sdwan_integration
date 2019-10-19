@@ -49,11 +49,11 @@ namespace SAFCRMUnifyIntegration
                     EntityReference refsafid = workorders.GetAttributeValue<EntityReference>("spectra_safid");
                     Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
                     //
-                    //if (SAF.Attributes.Contains("onl_orgcreationresponseonl"))
-                    //{
-                    //    if (!SAF.GetAttributeValue<Boolean>("onl_orgcreationresponseonl"))
-                    //        return;
-                    //}
+                    if (workorders.Attributes.Contains("spectra_billingresponse"))
+                    {
+                        if (workorders.GetAttributeValue<string>("spectra_billingresponse") == "Done")
+                            return;
+                    }
 
                     CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
 
@@ -112,11 +112,23 @@ namespace SAFCRMUnifyIntegration
 
             DateTime billStartDate2 = DateTime.Now.AddMonths(1);
 
-            if (SAF.Attributes.Contains("onl_advanceonl"))
-                advance = SAF.GetAttributeValue<bool>("onl_advanceonl");
-            if (advance) advanceBilling = "true";
-            else advanceBilling = "false";
+            if (SAF.Attributes.Contains("onl_billtypeonl"))
+            {
+                //Advance
+                if (SAF.GetAttributeValue<OptionSetValue>("onl_billtypeonl").Value == 122050000)
+                {
+                    advanceBilling = "true";
+                }
+                else
+                {
+                    advanceBilling = "false";
+                }
+            }
+            //    advance = SAF.GetAttributeValue<bool>("onl_billtypeonl");
+            //if (advance) advanceBilling = "true";
+            //else advanceBilling = "false";
 
+                
             Entity Parent_SAfName = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_name")); //getting SAF Name on behalf of safid
             SafNo = Parent_SAfName.GetAttributeValue<String>("onl_name");//getting SAF Name
 
@@ -336,13 +348,13 @@ namespace SAFCRMUnifyIntegration
                         service.Update(log);
                         flag = true;
                     }
-                    //if(flag==true)
-                    //{
-                    //    Entity _wko = new Entity("onl_workorders");
-                    //    _wko.Id = workorder.Id;
-                    //    _wko["spectra_billingrequest"] ="true";
-                    //    service.Update(_wko);
-                    //}
+                    if (flag == true)
+                    {
+
+                        Entity _wko = service.Retrieve("onl_workorders", workorder.Id, new ColumnSet("spectra_billingresponse"));
+                        _wko["spectra_billingresponse"] = "Done";
+                        service.Update(_wko);
+                    }
                     #endregion
                 }
                 #endregion

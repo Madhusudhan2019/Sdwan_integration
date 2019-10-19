@@ -46,6 +46,11 @@ namespace SAFCRMUnifyIntegration
                 Entity workorders = context.PostEntityImages["PostImage"];
                 if (workorders.GetAttributeValue<OptionSetValue>("onl_spectra_orderstatus").Value == 122050005) //when status is Provisioning Completed
                 {
+                    if (workorders.Attributes.Contains("spectra_contractresponse"))
+                    {
+                        if (workorders.GetAttributeValue<string>("spectra_contractresponse") == "Done")
+                            return;
+                    }
                     EntityReference refsafid = workorders.GetAttributeValue<EntityReference>("spectra_safid");
                     Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
                     CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
@@ -140,11 +145,22 @@ namespace SAFCRMUnifyIntegration
 
             DateTime billStartDate2 = DateTime.Now;
 
-            if (SAF.Attributes.Contains("onl_advanceonl"))
-                advance = SAF.GetAttributeValue<bool>("onl_advanceonl");
-            if (advance) advanceBilling = "true";
-            else advanceBilling = "false";
-
+            //if (SAF.Attributes.Contains("onl_billtypeonl"))
+            //    advance = SAF.GetAttributeValue<bool>("onl_billtypeonl");
+            //if (advance) advanceBilling = "true";
+            //else advanceBilling = "false";
+            if (SAF.Attributes.Contains("onl_billtypeonl"))
+            {
+                //Advance
+                if (SAF.GetAttributeValue<OptionSetValue>("onl_billtypeonl").Value == 122050000)
+                {
+                    advanceBilling = "true";
+                }
+                else
+                {
+                    advanceBilling = "false";
+                }
+            }
 
 
             #region First Invoice Date AND Bill End Date
@@ -175,8 +191,8 @@ namespace SAFCRMUnifyIntegration
 
                 if (seg.Name == "SDWAN")
                 {
-                    // Convert.ToInt32(billCycleEnt.GetAttributeValue<String>("alletech_days"))
-                    firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, 3);
+                    // 
+                    firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, Convert.ToInt32(billCycleEnt.GetAttributeValue<String>("alletech_days")));
                     billInvoiceEndDate = new DateTime(billStartDate2.Year, billStartDate2.Month, 3 + 1);
                     firstInvoiceDateString = DateFormater(firstInvoiceDate);
 
@@ -425,7 +441,7 @@ namespace SAFCRMUnifyIntegration
             {
                 throw new InvalidPluginExecutionException("Error in Request byte" + ex.StackTrace);
             }
-
+            bool cflag = false;
             if (context.Depth == 1)
             {
                 //Create Integration Log Enterprise
@@ -460,13 +476,16 @@ namespace SAFCRMUnifyIntegration
                         IntegrationLog["onl_safid"] = new EntityReference("onl_saf", safid);
 
                         service.Create(IntegrationLog);
+                        cflag = true;
                     }
                     #endregion
-
-                    Entity SAFResponse = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_integration_responseonl", "onl_orgcreationresponseonl"));
-                    //SAFResponse["onl_integration_responseonl"] = tmp;
-                    SAFResponse["onl_orgcreationresponseonl"] = true;
-                    service.Update(SAFResponse);
+                    if (cflag == true)
+                    {
+                        Entity _wko = service.Retrieve("onl_workorders", workorder.Id, new ColumnSet("spectra_contractresponse"));
+                        _wko["spectra_contractresponse"] = "Done";
+                        service.Update(_wko);
+                    }
+                   
                 }
             }
 
