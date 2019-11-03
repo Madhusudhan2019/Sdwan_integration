@@ -44,32 +44,79 @@ namespace SAFCRMUnifyIntegration
                 if (workorder.LogicalName != "onl_workorders")
                     return;
                 Entity workorders = context.PostEntityImages["PostImage"];
-                if (workorders.GetAttributeValue<OptionSetValue>("onl_spectra_orderstatus").Value == 122050005) //when status is Provisioning Completed
-                {
+                //if (workorders.GetAttributeValue<OptionSetValue>("onl_spectra_orderstatus").Value == 122050005) //when status is Provisioning Completed
+                //{
                     EntityReference refsafid = workorders.GetAttributeValue<EntityReference>("spectra_safid");
+                   
                     Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
                     //
-                    if (workorders.Attributes.Contains("spectra_billingresponse"))
+                    EntityReference refsite = workorders.GetAttributeValue<EntityReference>("onl_sitenameid");
+                    Entity Sites = service.Retrieve("onl_customersite", refsite.Id, new ColumnSet("spectra_contractresponse"));
+                    if (Sites.Attributes.Contains("spectra_contractresponse"))
                     {
-                        if (workorders.GetAttributeValue<string>("spectra_billingresponse") == "Done")
+                        if (Sites.GetAttributeValue<string>("spectra_contractresponse") == "Done")
                             return;
                     }
+                    EntityReference ownerLookup = (EntityReference)SAF.Attributes["onl_opportunityidid"];
 
-                    CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
+                    var opportunityName = ownerLookup.Name;
+                    Guid opportunityid = ownerLookup.Id;
+                    Entity Parent_accountid = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_accountid"));
+                    CanNo = Parent_accountid.GetAttributeValue<String>("alletech_accountid");
+                  //  CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
 
                     BillingAndSubscriptionRequest(service, SAF, CanNo, context,workorders);
-                }
+                //}
             }
         }
         public void BillingAndSubscriptionRequest(IOrganizationService service, Entity SAF,string canId, IPluginExecutionContext context,Entity workorder)
         {
             string SafNo = string.Empty;
-            #region Request Values
+             #region Request Values
 
            
 
             int childOrgId = 0, servicegroupno = 0;
             #region account details get
+
+            #region update and get billcyle
+            DateTime customerAcceptdate = workorder.GetAttributeValue<DateTime>("spectra_acceptedbycustomerdate");
+            int days = customerAcceptdate.Day;
+            EntityReference BusinessSegment = SAF.GetAttributeValue<EntityReference>("onl_businesssegmentonl");
+
+            Entity siteproduct = service.Retrieve("onl_workorders", workorder.Id, new ColumnSet("onl_productattached"));
+            Entity getproduct = service.Retrieve("product", siteproduct.GetAttributeValue<EntityReference>("onl_productattached").Id, new ColumnSet(true));
+
+            EntityReference billfrequency = getproduct.GetAttributeValue<EntityReference>("alletech_billingcycle");
+
+
+            string fetch = @"<fetch version='1.0' output-format='xml-platform' mapping='logical' distinct='false'>
+            <entity name='alletech_billcycle'>
+            <attribute name='alletech_name' />
+            <filter type='and'>
+                <condition attribute='alletech_billfrequency' operator='eq' value='{" + billfrequency.Id + @"}' />
+                <filter>
+                <condition attribute='spectra_businesssegment' operator='eq' value='{" + BusinessSegment.Id + @"}' />
+                <condition attribute='alletech_days' operator='like' value='%" + days + @"%' />
+                </filter>
+            </filter>
+            </entity>
+            </fetch>";
+            EntityCollection resultbillcycle = service.RetrieveMultiple(new FetchExpression(fetch));
+            if (resultbillcycle.Entities.Count > 0)
+            {
+                Entity alltech_billcyle = resultbillcycle.Entities[0];
+                Guid billcyle = alltech_billcyle.GetAttributeValue<Guid>("alletech_billcycleid");
+                Entity _saf = new Entity("onl_saf");
+                _saf.Id = SAF.Id;
+                _saf["onl_billcycleonl"] = new EntityReference("alletech_billcycle", billcyle);
+                service.Update(_saf);
+            }
+
+
+            
+            #endregion
+
             QueryExpression query = new QueryExpression("account");
             query.NoLock = true;
             query.ColumnSet.AddColumns("alletech_accountno", "alletech_servicegroupno");
@@ -98,10 +145,10 @@ namespace SAFCRMUnifyIntegration
             String advanceBilling = String.Empty;
             String billCycle = String.Empty;
             int billcycleno = 0;
-            Boolean advance = true;
+            
             Int32 billingFrequency = 0;
             String productId = String.Empty;
-            int billProfileNo = 1, invoiceTemplateNo = 5, domSegment = 0;
+            int billProfileNo = 1,  domSegment = 0;
             EntityReference seg = null;
 
             Entity safref = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_opportunityidid"));
@@ -124,10 +171,6 @@ namespace SAFCRMUnifyIntegration
                     advanceBilling = "false";
                 }
             }
-            //    advance = SAF.GetAttributeValue<bool>("onl_billtypeonl");
-            //if (advance) advanceBilling = "true";
-            //else advanceBilling = "false";
-
                 
             Entity Parent_SAfName = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_name")); //getting SAF Name on behalf of safid
             SafNo = Parent_SAfName.GetAttributeValue<String>("onl_name");//getting SAF Name
@@ -158,16 +201,17 @@ namespace SAFCRMUnifyIntegration
                 
                 if (seg.Name == "SDWAN")
                 {
-                    int billdays =  Convert.ToInt32(billCycleEnt.GetAttributeValue<String>("alletech_days"));
+                    int billdays =  days;
+                    
+                    
+                    firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, billCycleEnt.GetAttributeValue<int>("alletech_billcycleday"));
+                    //  billInvoiceEndDate = new DateTime(billStartDate2.Year, billStartDate2.Month, billdays + 1);
+                    //Entity prodseg = service.Retrieve("alletech_productsegment", seg.Id, new ColumnSet("spectra_invoicetemplate", "spectra_billprofile", "spectra_dunningprofile"));
 
-                    firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, billdays);
-                    billInvoiceEndDate = new DateTime(billStartDate2.Year, billStartDate2.Month, billdays + 1);
-                    Entity prodseg = service.Retrieve("alletech_productsegment", seg.Id, new ColumnSet("spectra_invoicetemplate", "spectra_billprofile", "spectra_dunningprofile"));
+                    //billProfileNo = prodseg.GetAttributeValue<int>("spectra_billprofile");
+                    //invoiceTemplateNo = prodseg.GetAttributeValue<int>("spectra_invoicetemplate");
+                    //domSegment = prodseg.GetAttributeValue<int>("spectra_dunningprofile");
 
-                    billProfileNo = prodseg.GetAttributeValue<int>("spectra_billprofile");
-                    invoiceTemplateNo = prodseg.GetAttributeValue<int>("spectra_invoicetemplate");
-                    domSegment = prodseg.GetAttributeValue<int>("spectra_dunningprofile");
-                   
                 }
                 else
                 {
@@ -342,7 +386,6 @@ namespace SAFCRMUnifyIntegration
                         log["alletech_message"] = Message;
                         EntityReference refsite = workorder.GetAttributeValue<EntityReference>("onl_sitenameid");
                         log["spectra_siteidid"] = new EntityReference("onl_customersite", refsite.Id);
-                        // IntegrationLog["alletech_can"] = new EntityReference("onl_saf", SAF.Id);
                         Guid safid = SAF.Id;
                         log["onl_safid"] = new EntityReference("onl_saf", safid);
                         service.Update(log);
@@ -350,10 +393,16 @@ namespace SAFCRMUnifyIntegration
                     }
                     if (flag == true)
                     {
-
+                        EntityReference refsite = workorder.GetAttributeValue<EntityReference>("onl_sitenameid");
+                        //spectra_contractresponse
+                        Entity Sites = service.Retrieve("onl_customersite", refsite.Id, new ColumnSet("spectra_contractresponse"));
+                        Sites["spectra_contractresponse"] = "Done";
+                        service.Update(Sites);
+                        //workorder
                         Entity _wko = service.Retrieve("onl_workorders", workorder.Id, new ColumnSet("spectra_billingresponse"));
-                        _wko["spectra_billingresponse"] = "Done";
+                        _wko["spectra_billingresponse"] = "True";
                         service.Update(_wko);
+
                     }
                     #endregion
                 }

@@ -18,11 +18,14 @@ namespace SAFCRMUnifyIntegration
         Guid Productsegmentid = new Guid();
         public string ShortnameUnify = string.Empty;
         string PRDSeg = null;
+        int industryname;
+      
+        public string NewAccountid;
         private string configData = string.Empty;
         String childshortname = String.Empty;
         String billingContactfirst = String.Empty;
         Guid CreateAccountId = new Guid();
-        Guid NewAccountid = new Guid();
+        // Guid NewAccountid = new Guid();
         private Dictionary<string, string> globalConfig = new Dictionary<string, string>();
         public IntegrationSAF(string unsecureString, string secureString)
         {
@@ -48,7 +51,7 @@ namespace SAFCRMUnifyIntegration
             String Tan = String.Empty;
             String Pan = String.Empty;
             String Gst = String.Empty;
-            string parentno = string.Empty;
+
             String childName = String.Empty;
             String childFullName = String.Empty;
             string receiptLedgerAccountNo = string.Empty;
@@ -99,7 +102,6 @@ namespace SAFCRMUnifyIntegration
                         //lookup area Entity   
                         EntityReference AreaID = (EntityReference)Parent_area.Attributes["alletech_area"];
                         Guid Areaid = AreaID.Id; // getting Area id based on Opportunity id
-                                                 //getting Area Name on behalf of Area id 
 
 
                         Entity Parent_Buildingname = service.Retrieve("alletech_area", Areaid, new ColumnSet("alletech_name"));
@@ -115,7 +117,7 @@ namespace SAFCRMUnifyIntegration
 
                         Buildingname = BuldingID.Name;
 
-                        int industryname, verticalsegmentno;
+                        int verticalsegmentno;
                         Entity oppty = service.Retrieve("opportunity", opportunityid, new ColumnSet("spectra_customersegmentcode"));
                         if (oppty.Attributes.Contains("spectra_customersegmentcode"))
                         {
@@ -136,6 +138,7 @@ namespace SAFCRMUnifyIntegration
                             tracingService.Trace("Customer Segment is Empty on Lead");
                         }
                         //Product Segment
+
                         Entity Productrecord = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_productsegment"));
 
                         if (Productrecord.Attributes.Contains("onl_spectra_productsegment"))
@@ -143,10 +146,9 @@ namespace SAFCRMUnifyIntegration
                             string Productsegment = ((EntityReference)(Productrecord.Attributes["onl_spectra_productsegment"])).Name;
                             Productsegmentid = ((EntityReference)(Productrecord.Attributes["onl_spectra_productsegment"])).Id;
 
-                            if (Productsegment == "SDWAN")
-                            {
+                            
                                 verticalsegmentno = 8;
-                            }
+                           
                         }
                         else
                         {
@@ -165,7 +167,7 @@ namespace SAFCRMUnifyIntegration
 
                         #region Add Child account updation
                         //call child account update 
-                  //      ChildAccountUpdation(service, SAF, opportunityid, context);
+                        ChildAccountUpdation(service, SAF, opportunityid, context);
                         #endregion
 
                         #region Check Parent account condition 
@@ -203,14 +205,9 @@ namespace SAFCRMUnifyIntegration
 
                         #region billing record start
 
-                        //  Entity Parent_SAfName = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_name")); //getting SAF Name on behalf of safid
                         SafNo = SAF.GetAttributeValue<String>("onl_name");//getting SAF Name
-
-                        //Entity Parent_TANId = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_tanno")); 
                         Tan = SAF.GetAttributeValue<String>("onl_tanno");//getting TAN Id on behalf of safid
-                                                                         //Entity Parent_PANId = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_panno")); 
                         Pan = SAF.GetAttributeValue<String>("onl_panno");//getting PAN Id on behalf of safid
-                                                                         //Entity Parent_GST = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_gstnumber")); 
                         Gst = SAF.GetAttributeValue<String>("onl_gstnumber");//getting PAN Id on behalf of safid
 
 
@@ -222,15 +219,6 @@ namespace SAFCRMUnifyIntegration
                         //get City Id
                         Guid pCityId = ECityId.Id;
                         var cityname = ECityId.Name;
-                        QueryExpression querydom = new QueryExpression();
-                        querydom.EntityName = "alletech_domain";
-                        querydom.ColumnSet.AddColumns("alletech_name", "alletech_domain_id");
-                        querydom.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
-                        querydom.Criteria.AddCondition("pcl_city", ConditionOperator.Equal, pCityId);
-                        EntityCollection result1 = service.RetrieveMultiple(querydom);
-                        Entity domainentity = result1.Entities[0];
-                        if (domainentity.Attributes.Contains("alletech_domain_id"))
-                            childDomainId = domainentity.Attributes["alletech_domain_id"].ToString();
 
 
                         Entity oppsocalmedia = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_facebookid", "alletech_twitterid", "alletech_emailid", "alletech_mobileno", "alletech_salutation"));
@@ -242,7 +230,7 @@ namespace SAFCRMUnifyIntegration
 
 
 
-                        bool EndB = false;
+
                         String firstnameAccShip = String.Empty;
                         String lastnameAccShip = String.Empty;
                         String billCityId = String.Empty;
@@ -250,6 +238,7 @@ namespace SAFCRMUnifyIntegration
                         String firstName = String.Empty;
                         String lastName = String.Empty;
 
+                        String shipsitecity = String.Empty;
                         String billToStreet = String.Empty;
                         String shipToStreet = String.Empty;
                         String billToPincode = String.Empty;
@@ -289,15 +278,6 @@ namespace SAFCRMUnifyIntegration
                         string debitcardno = string.Empty;
                         string approvalcodedebit = string.Empty;
 
-                        //Entity childBillCity = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_cityonl"));
-                        //Entity childbuidingplot = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_buildingnoplotnoonl"));
-                        //Entity childbillfloor = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_floor"));
-                        //Entity childbillbuildingname = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_buildingnameonl"));
-                        //Entity childspecifybuilding = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_specifybuildingonl"));
-                        //Entity childbillarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_areaonl"));
-                        //Entity childspecifyarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_specifyareaonl"));
-                        //Entity childbilllandmark = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_landmarkifany"));
-                        //Entity childbillstreet = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_street"));
 
                         tracingService.Trace("In Bill TO and Ship to Variables");
                         if (SAF.Attributes.Contains("onl_cityonl"))
@@ -372,29 +352,19 @@ namespace SAFCRMUnifyIntegration
                             billToState = state.GetAttributeValue<String>("alletech_statename");
                         }
                         //Entity childsepectrapincode = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_pincode"));
-                        if (SAF.Attributes.Contains("onl_spectra_pincode"))
-                            shipToPincode = SAF.GetAttributeValue<String>("onl_spectra_pincode").Replace(" ", "");
+                        //if (SAF.Attributes.Contains("onl_spectra_pincode"))
+                        //    shipToPincode = SAF.GetAttributeValue<String>("onl_spectra_pincode").Replace(" ", "");
 
 
                         //Entity childsepectrastate = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_state"));
-                        if (SAF.Attributes.Contains("onl_spectra_state"))
-                        {
-                            Entity state = service.Retrieve("alletech_state", SAF.GetAttributeValue<EntityReference>("onl_spectra_state").Id, new ColumnSet("alletech_statename"));
-                            shipToState = state.GetAttributeValue<String>("alletech_statename");
-                        }
+                        //if (SAF.Attributes.Contains("onl_spectra_state"))
+                        //{
+                        //    Entity state = service.Retrieve("alletech_state", SAF.GetAttributeValue<EntityReference>("onl_spectra_state").Id, new ColumnSet("alletech_statename"));
+                        //    shipToState = state.GetAttributeValue<String>("alletech_statename");
+                        //}
                         #endregion
 
                         #region Parent Account record 
-
-                        //Entity childSpectrabuidingplot = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_buildingnoplotno"));
-                        //Entity childspectrafloor = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_floor"));
-                        //Entity childspectrabuildingname = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_buildingname"));
-                        //Entity childspectraspecifybuilding = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_specifybuilding"));
-                        //Entity childspectraarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_area"));
-                        //Entity childspectraspecifyarea = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_specifyarea"));
-                        //Entity childspectralandmark = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_landmark"));
-                        //Entity childspectrastreet = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_street"));
-                        //Entity childspectrablock = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_block"));
 
                         tracingService.Trace("After Billing street");
 
@@ -453,10 +423,7 @@ namespace SAFCRMUnifyIntegration
 
                         shiptostreetcomplete = shipToplotno + shipTofloor + shipToblock + shipTobuildingname + shipToStreet + shiptoarea + shipTolandmark;
                         #endregion
-                        if (shiptostreetcomplete != null)
-                        {
-                            EndB = true;
-                        }
+
                         //Entity childspectracity = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_spectra_city"));
                         if (SAF.Attributes.Contains("onl_spectra_city"))
                         {
@@ -466,50 +433,7 @@ namespace SAFCRMUnifyIntegration
 
                         #endregion
 
-                        #region Reevenue group Entity record
-                        QueryExpression queryConfig = new QueryExpression("alletech_revenuegroup");
-                        queryConfig.ColumnSet = new ColumnSet(true);
-                        queryConfig.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
-                        queryConfig.Criteria.AddCondition("alletech_name", ConditionOperator.Equal, cityname);
-                        EntityCollection RevenuegroupCollection = service.RetrieveMultiple(queryConfig);
 
-                        Entity Rev = RevenuegroupCollection.Entities[0];
-                        if (RevenuegroupCollection.Entities.Count > 0)
-                        {
-                            // Entity Rev = RevenuegroupCollection.Entities[0]; 
-                            if (Rev.Attributes.Contains("alletech_id"))
-                            {
-                                CafInsCityRevGrpId = Rev.GetAttributeValue<string>("alletech_id");
-                            }
-                            if (Rev.Attributes.Contains("alletech_revenuecoagroupid"))
-                            {
-                                coaGroupNo = Rev.GetAttributeValue<int>("alletech_revenuecoagroupid").ToString();
-                            }
-                            if (Rev.Attributes.Contains("alletech_coano"))
-                            {
-                                coaNo = Rev.GetAttributeValue<int>("alletech_coano").ToString();
-                            }
-                            if (Rev.Attributes.Contains("alletech_ledgerbookno"))
-                            {
-                                ledgerBookNo = Rev.GetAttributeValue<int>("alletech_ledgerbookno").ToString();
-                            }
-                            if (Rev.Attributes.Contains("alletech_ledgerparentid"))
-                            {
-                                ledgerParentId = Rev.GetAttributeValue<int>("alletech_ledgerparentid").ToString();
-                            }
-
-                            if (Rev.Attributes.Contains("alletech_placeofconsumptionid"))
-                            {
-                                placeOfConsumptionId = Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString();
-
-                            }
-                            if (Rev.Attributes.Contains("alletech_receiptledgeraccountno"))
-                            {
-                                receiptLedgerAccountNo = Rev.GetAttributeValue<int>("alletech_receiptledgeraccountno").ToString();
-                            }
-                            //throw new InvalidPluginExecutionException("sd:-" + placeOfConsumptionId.ToString());
-                        }
-                        #endregion
                         //payment fields start
 
                         #region payment mode type and bank details
@@ -760,7 +684,6 @@ namespace SAFCRMUnifyIntegration
                         else
                             firstnameAccShip = ssize[0];
 
-                        //#region Constructing Request XML
 
                         #region IP Address of Machine
 
@@ -776,508 +699,488 @@ namespace SAFCRMUnifyIntegration
                         //    }
                         //}
                         #endregion
-                        if (!SAF.Attributes.Contains("onl_parentaccountonl"))
+                        //if (!SAF.Attributes.Contains("onl_parentaccountonl"))
+                        //{
+                        #region Without Parent Account
+                        bool flag = false;
+                        // Check total no of Opportunity Sites  
+                        QueryExpression querycustomersite = new QueryExpression();
+                        querycustomersite.EntityName = "onl_customersite";
+                        querycustomersite.ColumnSet = new ColumnSet(true);
+                        querycustomersite.Criteria.AddCondition("onl_opportunityidid", ConditionOperator.Equal, opportunityid);
+                        EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
+                        decimal Sitecount = resultcustomersite.Entities.Count;
+                        //Payment Amount Divided by Total no of Sites
+                        paymentAmount = (payamt / Sitecount).ToString();
+                        //Security Amount Divided by Total  no of Sites
+                        if (securityAmount != null && securityAmount != string.Empty)
+                            securityAmount = (decimal.Parse(securityAmount) / Sitecount).ToString();
+
+                        int rowcount = 1;
+                        foreach (Entity entity in resultcustomersite.Entities)
                         {
-                            #region Without Parent Account
-                            bool flag = false;
-                            // Check total no of Opportunity Sites  
-                            QueryExpression querycustomersite = new QueryExpression();
-                            querycustomersite.EntityName = "onl_customersite";
-                            querycustomersite.ColumnSet = new ColumnSet(true);
-                            querycustomersite.Criteria.AddCondition("onl_opportunityidid", ConditionOperator.Equal, opportunityid);
-                            EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
-                            decimal Sitecount = resultcustomersite.Entities.Count;
-                            //Payment Amount Divided by Total no of Sites
-                            paymentAmount = (payamt / Sitecount).ToString();
-                            //Security Amount Divided by Total  no of Sites
-                            if (securityAmount != null && securityAmount != string.Empty)
-                                securityAmount = (decimal.Parse(securityAmount) / Sitecount).ToString();
-
-                            int rowcount = 1;
-                            foreach (Entity entity in resultcustomersite.Entities)
+                            if (rowcount > 1)
                             {
-                                if (rowcount > 1)
-                                {
-                                    //get unify Account no
-                                    parentno = GetParentNo(service, CanNo);
+                                //
 
-                                    string CreateSiteAccount = "CreateSiteAccount";
-                                    //Generate Account Based on Site Id 
-                                   CanNo= ParentAccountSitesCreation(service, ref SAF, opportunityid, context, rowcount, childshortname, CreateSiteAccount);
-                                    //Get Account Created Id
-                                    //CanNo = GetAccountNo(service, NewAccountid);
-                                }
-                                #region getting site details
-                                var sitename = entity.GetAttributeValue<String>("spectra_customername");
+                                string CreateSiteAccount = "CreateSiteAccount";
+                                //Generate Account Based on Site Id & Get Account Created Id
+                                CanNo = ChildcountSitesCreation(service, ref SAF, opportunityid, context, rowcount, childshortname, CreateSiteAccount, entity);
 
-                                string[] ssizefullnmae = sitename.Split(null);
-                                if (ssizefullnmae.Length > 1)
-                                {
-                                    firstName = ssizefullnmae[0];
-                                    for (int k = 1; k < ssizefullnmae.Length; k++)
-                                    {
-                                        lastnameAccShip = lastnameAccShip + " " + ssizefullnmae[k];
-                                    }
-                                }
-                                else
-                                    firstName = ssizefullnmae[0];
-
-                                #endregion
-
-                                #region start xml  
-                                requestXml = "";
-                                requestXml += "<CRMCAFRequest>" +
-                                "<CAF_No>" + SafNo + "</CAF_No>" +
-                                "<CAN_No>" + CanNo + "</CAN_No>";
-                                if (rowcount == 1)
-                                {
-
-
-                                    #region OrganisationRequest
-                                    requestXml += "<OrganisationRequest>" +
-                                    "<customer>true</customer>" +
-                                    "<domain>" + childDomainId + "</domain>" +
-                                    "<name>" + childName + "</name>" +
-                                    "<shortName>" + paccshort + "</shortName>" +
-                                    "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
-                                    "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
-                                    "<societyName>" + Buildingname + "</societyName>" +
-                                    "<areaName>" + areaname + "</areaName>" +
-                                    "<societyFieldId>2</societyFieldId>" +
-                                    "<areaFieldId>3</areaFieldId>" +
-                                    "<productSegmentNo>6</productSegmentNo>" +
-                                    "<verticalSegmentNo>8</verticalSegmentNo>" +
-                                    "<industryTypeNo>22</industryTypeNo>" +
-                                    "</OrganisationRequest>";
-                                    #endregion
-
-
-                                    requestXml += "<ChildOrganisationRequest>" +
-                                    "<customer>true</customer>" +
-                                    "<domain>" + childDomainId + "</domain>" +
-                                    "<name>" + childName + "</name>" +
-                                    "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
-                                    "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
-                                    "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
-                                    "<societyName>" + Buildingname + "</societyName>" +
-                                    "<areaName>" + areaname + "</areaName>" +
-                                    "<societyFieldId>2</societyFieldId>" +
-                                    "<areaFieldId>3</areaFieldId>" +
-                                    "<productSegmentNo>6</productSegmentNo>" +
-                                    "<verticalSegmentNo>8</verticalSegmentNo>" +
-                                    "<industryTypeNo>22</industryTypeNo>" +
-                                    "</ChildOrganisationRequest>";
-                                }
-                                else
-                                {
-
-
-                                    requestXml += "<ChildOrganisationRequest>" +
-                                    "<customer>true</customer>" +
-                                    "<domain>" + childDomainId + "</domain>" +
-                                    "<name>" + childName + "</name>" +
-                                    "<parentNo>" + parentno + "</parentNo>" +
-                                    "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
-                                    "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
-                                    "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
-                                    "<societyName>" + Buildingname + "</societyName>" +
-                                    "<areaName>" + areaname + "</areaName>" +
-                                    "<societyFieldId>2</societyFieldId>" +
-                                    "<areaFieldId>3</areaFieldId>" +
-                                    "<productSegmentNo>6</productSegmentNo>" +
-                                    "<verticalSegmentNo>8</verticalSegmentNo>" +
-                                    "<industryTypeNo>22</industryTypeNo>" +
-                                    "</ChildOrganisationRequest>";
-                                }
-                                #region Contact details
-
-                                #region Billing
-                                requestXml += "<ContactDetails>" +
-                                "<cityNo>" + billCityId + "</cityNo>" +
-                                "<contactTypeNo>1</contactTypeNo>" +
-                                "<firstName>" + firstnameAccShip + "</firstName>";
-                                if (!String.IsNullOrEmpty(lastName))
-                                    requestXml = requestXml + "<lastName>" + lastName + "</lastName>";
-                                requestXml += "<salutationNo>" + salutation + "</salutationNo>" +
-                                "<pin>" + billToPincode + "</pin>" +
-                                "<state>" + billToState + "</state>" +
-                                "<street>" + billtostreetcomplete + "</street>" +
-                                "</ContactDetails>" +
-                                #endregion
-
-                                #region  Shipping Address
-                            "<ContactDetails>" +
-                               "<cityNo>" + billCityId + "</cityNo>" +
-                                "<contactTypeNo>2</contactTypeNo>" +
-                                "<firstName>" + firstName + "</firstName>";
-
-                                if (!String.IsNullOrEmpty(lastnameAccShip))
-                                    requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
-
-                                requestXml = requestXml +
-                                "<salutationNo>" + salutation + "</salutationNo>" +
-                                "<pin>" + shipToPincode + "</pin>" +
-                                "<state>" + shipToState + "</state>" +
-                                "<street>" + shiptostreetcomplete + "</street>" +
-                                "</ContactDetails>";
-                                #endregion
-
-                                #endregion
-
-                                //#region if MAC or CAC same state
-                                //if (EndB)
-                                //{
-                                //    requestXml = requestXml + "<ContactDetails>" +                     //End A Address
-                                //"<cityNo>" + ShipCityId + "</cityNo>" +
-                                //"<contactTypeNo>8</contactTypeNo>" +
-                                //"<firstName>" + firstnameAccShip + "</firstName>";
-
-                                //    if (!String.IsNullOrEmpty(lastnameAccShip))
-                                //        requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
-
-                                //    requestXml = requestXml +
-                                //    "<salutationNo>" + salutation + "</salutationNo>" +
-                                //    "<pin>" + shipToPincode + "</pin>" +
-                                //    "<state>" + shipToState + "</state>" +
-                                //    "<street>" + shiptostreetcomplete + "</street>" +
-                                //    "</ContactDetails>";
-                                //    //}
-                                //    //if (!String.IsNullOrEmpty(iabAddress))  //  installation address B (P2P Address)
-                                //    //{
-                                //    requestXml = requestXml + "<ContactDetails>" +
-                                //    "<cityNo>" + billCityId + "</cityNo>" +
-                                //    "<contactTypeNo>9</contactTypeNo>" +
-                                //    "<firstName>" + firstnameAccShip + "</firstName>";
-
-                                //    //if (!String.IsNullOrEmpty(iabContactLastName))
-                                //    requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
-
-                                //    requestXml = requestXml +
-                                //   "<salutationNo>" + salutation + "</salutationNo>" +
-                                //   "<pin>" + shipToPincode + "</pin>" +
-                                //   "<state>" + shipToState + "</state>" +
-                                //   "<street>" + billtostreetcomplete + "</street>" +
-                                //   "</ContactDetails>";
-                                //}
-                                //#endregion
-
-                                #region Bill  to communication
-                                if (Email != null)
-                                {
-                                    requestXml = requestXml + "<commMode>" +
-                                    "<commTypeNo>4</commTypeNo>" +
-                                    //"<contactNo></contactNo>" +     //  ----- bill email
-                                    "<isDefault>false</isDefault>" +
-                                    "<dnc>false</dnc>" +
-                                    "<ident>" + Email + "</ident>" +
-                                    "<contactType>BillTo</contactType>" +
-                                    "</commMode>";
-                                }
-
-                                if (Mobile != "")
-                                {
-                                    requestXml = requestXml +
-                                    "<commMode>" + "<commTypeNo>2</commTypeNo>" +
-                                    // "<contactNo></contactNo>" +     //  ----- bill phone
-                                    "<isDefault>false</isDefault>" +
-                                    "<dnc>false</dnc>" +
-                                    "<ident>" + Mobile + "</ident>" +
-                                    "<contactType>BillTo</contactType>" +
-                                    "</commMode>";
-                                }
-
-                                if (Facebook != "")
-                                {
-                                    requestXml = requestXml +
-                                    "<commMode>" +
-                                    "<commTypeNo>8</commTypeNo>" +
-                                    //"<contactNo></contactNo>" +     //  ----- bill to fb
-                                    "<isDefault>false</isDefault>" +
-                                    "<dnc>false</dnc>" +
-                                    "<ident>" + Facebook + "</ident>" +
-                                    "<contactType>BillTo</contactType>" +
-                                    "</commMode>";
-                                }
-
-                                if (Twitter != "")
-                                {
-                                    requestXml = requestXml +
-                                    "<commMode>" +
-                                    "<commTypeNo>7</commTypeNo>" +
-                                    //"<contactNo></contactNo>" +     //  ----- bill to twitter
-                                    "<isDefault>false</isDefault>" +
-                                    "<dnc>false</dnc>" +
-                                    "<ident>" + Twitter + "</ident>" +
-                                    "<contactType>BillTo</contactType>" +
-                                    "</commMode>";
-                                }
-                                #endregion
-
-                                #region Ship to communication
-                                if (Email != "")
-                                {
-                                    requestXml = requestXml +
-                                    "<commMode>" +
-                                    "<commTypeNo>4</commTypeNo>" +
-                                    //"<contactNo></contactNo>" +     //  ----- ship to email
-                                    "<isDefault>false</isDefault>" +
-                                    "<dnc>false</dnc>" +
-                                    "<ident>" + entity.GetAttributeValue<String>("onl_customeremailaddress") + "</ident>" +
-                                    "<contactType>ShipTo</contactType>" +
-                                    "</commMode>";
-                                }
-
-                                if (Mobile != "")
-                                {
-                                    requestXml = requestXml +
-                                    "<commMode>" +
-                                    "<commTypeNo>2</commTypeNo>" +
-                                    //"<contactNo></contactNo>" +     //  ----- ship to phone
-                                    "<isDefault>false</isDefault>" +
-                                    "<dnc>false</dnc>" +
-                                    "<ident>" + entity.GetAttributeValue<String>("onl_ol_customercontactnumber") + "</ident>" +
-                                    "<contactType>ShipTo</contactType>" +
-                                    "</commMode>";
-                                }
-                                #endregion
-
-                                //#region MAC and CAC Same state
-                                //if (EndB)
-                                //{
-                                //    if (Email != "")
-                                //    {
-                                //        requestXml = requestXml +
-                                //        "<commMode>" +
-                                //        "<commTypeNo>4</commTypeNo>" +
-                                //        "<isDefault>false</isDefault>" +
-                                //        "<dnc>false</dnc>" +
-                                //        "<ident>" + Email + "</ident>" +
-                                //        "<contactType>EndA</contactType>" +
-                                //        "</commMode>";
-                                //    }
-
-                                //    if (Mobile != "")
-                                //    {
-                                //        requestXml = requestXml +
-                                //        "<commMode>" +
-                                //        "<commTypeNo>2</commTypeNo>" +
-                                //        "<isDefault>false</isDefault>" +
-                                //        "<dnc>false</dnc>" +
-                                //        "<ident>" + Mobile + "</ident>" +
-                                //        "<contactType>EndA</contactType>" +
-                                //        "</commMode>";
-                                //    }
-
-                                //    if (!String.IsNullOrEmpty(Email))  //  ----- End B to email
-                                //    {
-                                //        requestXml = requestXml +
-                                //        "<commMode>" +
-                                //        "<commTypeNo>4</commTypeNo>" +
-                                //        // "<contactNo></contactNo>" +
-                                //        "<isDefault>false</isDefault>" +
-                                //        "<dnc>false</dnc>" +
-                                //        "<ident>" + Email + "</ident>" +
-                                //        "<contactType>EndB</contactType>" +
-                                //        "</commMode>";
-                                //    }
-
-                                //    if (!String.IsNullOrEmpty(Mobile)) //  ----- End B to phone
-                                //    {
-                                //        requestXml = requestXml +
-                                //        "<commMode>" +
-                                //        "<commTypeNo>2</commTypeNo>" +
-                                //        // "<contactNo></contactNo>" +
-                                //        "<isDefault>false</isDefault>" +
-                                //        "<dnc>false</dnc>" +
-                                //        "<ident>" + Mobile + "</ident>" +
-                                //        "<contactType>EndB</contactType>" +
-                                //        "</commMode>";
-                                //    }
-                                //}
-                                //#endregion
-
-                                #region Ledger request 
-                                requestXml = requestXml +
-                                "<LedgerRequest>" +
-                                "<coaGroupNo>" + coaGroupNo + "</coaGroupNo>" +
-                                "<coaNo>" + coaNo + "</coaNo>" +
-                                "<currencyISO>INR</currencyISO>" +
-                                "<ledgerAccountTypeNo>3</ledgerAccountTypeNo>" +
-                                "<ledgerBookNo>" + ledgerBookNo + "</ledgerBookNo>" +
-                                "<name>" + childName + "</name>" +
-                                "<parentId>" + ledgerParentId + "</parentId>" +
-
-                                "<paymentAmnt>" + paymentAmount + "</paymentAmnt>" +
-                                "<securityAmnt>" + securityAmount + "</securityAmnt>" +
-                                "<paymentType>" + paymentType + "</paymentType>" +
-                                "<depositType>" + securityDepositType + "</depositType>" +
-                                "<paymentDate>" + paymentDate + "</paymentDate>" +
-                                "<chequeNo>" + chequeNo + "</chequeNo>" +
-                                "<bankNo>" + bankNo + "</bankNo>" +
-                                "<bankBranch>" + banBranch + "</bankBranch>" +
-                                "<gst>" + Gst + "</gst>" +
-                                "<pan>" + Pan + "</pan>" +
-                                "<tan>" + Tan + "</tan>" +
-                                "</LedgerRequest>" +
-                                #endregion
-
-                                #region serviceGroup 
-                    "<serviceGroup>" +
-                                "<actcat>2</actcat>" +
-                                "<actid>" + CanNo + "</actid>" +
-                                "<actname>" + childName + "</actname>" +
-                                "<domno>" + childDomainId + "</domno>" +
-                                "<placeOfConsumptionId>" + Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString() + "</placeOfConsumptionId>" +
-                                "</serviceGroup>" +
-                                #endregion
-
-                                #region SessionObject
-                    "<SessionObject>" +
-                                "<credentialId>1</credentialId>" +
-                                "<ipAddress>22.23.25.12</ipAddress>" +
-                                "<source>CRM</source>" +
-                                "<userName>crm.admin</userName>" +
-                                "<userType>123</userType>" +
-                                "<usrNo>10651</usrNo>" +
-                                "</SessionObject>" +
-                                "</CRMCAFRequest>";
-                                #endregion
-
-
-                                if (requestXml.Contains("&"))
-                                {
-                                    requestXml = requestXml.Replace("&", "&amp;");
-                                }
-
-
-                                var B2Buri = new Uri("http://jbossuat.spectranet.in:9001/rest/getCustomer/");
-                                var uri = B2Buri;
-
-                                Byte[] requestByte = Encoding.UTF8.GetBytes(requestXml);
-
-                                WebRequest request = WebRequest.Create(uri);
-                                request.Method = WebRequestMethods.Http.Post;
-                                request.ContentLength = requestByte.Length;
-                                request.ContentType = "text/xml; encoding='utf-8'";
-                                request.GetRequestStream().Write(requestByte, 0, requestByte.Length);
-
-                                // 
-                                #region Response validation
-                                try
-                                {
-                                    if (context.Depth == 1)
-                                    {
-                                        using (var response = request.GetResponse())
-                                        {
-                                            XmlDocument xmlDoc = new XmlDocument();
-                                            xmlDoc.Load(response.GetResponseStream());
-                                            string tmp = xmlDoc.InnerXml.ToString();
-
-                                            string CAF_No, CAN_No, Code, Message;
-                                            #region To create Integration Log from Response
-                                            XmlNodeList node1 = xmlDoc.GetElementsByTagName("CRMCAFResponse");
-                                            for (int i = 0; i <= node1.Count - 1; i++)
-                                            {
-                                                CAF_No = node1[i].ChildNodes.Item(0).InnerText.Trim();
-                                                CAN_No = node1[i].ChildNodes.Item(1).InnerText.Trim();
-                                                Code = node1[i].ChildNodes.Item(2).InnerText.Trim();
-                                                Message = node1[i].ChildNodes.Item(3).InnerText.Trim();
-                                                Entity IntegrationLog = new Entity("alletech_integrationlog_enterprise");
-                                                IntegrationLog["alletech_cafno"] = CAF_No;
-                                                IntegrationLog["alletech_canno"] = CAN_No;
-                                                IntegrationLog["alletech_code"] = Code;
-                                                IntegrationLog["alletech_message"] = Message;
-
-                                                IntegrationLog["alletech_name"] = "Approved_" + CAF_No + "_" + CAN_No;
-
-                                                IntegrationLog["alletech_responsetype"] = new OptionSetValue(2);
-                                                IntegrationLog["alletech_approvalrequest"] = requestXml;
-                                                Guid Siteguid = entity.Id;
-                                                Guid safid = SAF.Id;
-                                                //add site lookup 
-                                                IntegrationLog["spectra_siteidid"] = new EntityReference("onl_customersite", Siteguid);
-                                                // IntegrationLog["alletech_can"] = new EntityReference("onl_saf", SAF.Id);
-                                                IntegrationLog["onl_safid"] = new EntityReference("onl_saf", safid);
-                                                service.Create(IntegrationLog);
-                                                flag = true;
-                                            }
-                                            #endregion
-                                        }
-                                        if (flag == true)
-                                        {
-                                            #region Update Customer Site Details 
-                                            Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_parentaccout", "spectra_siteaccountno", "spectra_siteresponse", "spectra_siteuserpassword"));
-
-                                            ConditionExpression conditionacc = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, CanNo);
-                                            FilterExpression filteracc = new FilterExpression();
-                                            filteracc.AddCondition(conditionacc);
-                                            filteracc.FilterOperator = LogicalOperator.And;
-                                            QueryExpression queryacc = new QueryExpression
-                                            {
-                                                EntityName = "account",
-                                                ColumnSet = new ColumnSet("accountid"),
-                                                Criteria = filter,
-                                            };
-                                            EntityCollection childAccountC = service.RetrieveMultiple(queryacc);
-                                            if (childAccountC.Entities.Count == 0)
-                                                return;
-                                            Entity childPAccount = childAccountC.Entities[0];
-                                            Guid pacid = childPAccount.GetAttributeValue<Guid>("accountid");
-
-                                            Sites["spectra_parentaccout"] = new EntityReference("account", pacid);
-                                            Sites["spectra_siteaccountno"] = CanNo;
-                                            Sites["spectra_siteresponse"] = "true";
-                                            Sites["spectra_siteuserpassword"] = CreateRandomPasswordWithRandomLength(8);
-                                            service.Update(Sites);
-                                            #endregion
-                                        }
-                                        else
-                                        {
-                                            Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_siteaccountno", "spectra_siteresponse"));
-                                            Sites["spectra_siteaccountno"] = CanNo;
-                                            Sites["spectra_siteresponse"] = "false";
-                                            service.Update(Sites);
-                                        }
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    throw new InvalidPluginExecutionException(ex.Message);
-                                }
-                                #endregion
-                                #endregion
-                                rowcount++;
-                                System.Threading.Thread.Sleep(3000);
                             }
-                            if (context.Depth == 1)
+                            #region getting site details
+
+                            //city id based on each site
+                            Guid sitecity = entity.GetAttributeValue<EntityReference>("onl_city").Id;
+                            string sitecityname = entity.GetAttributeValue<EntityReference>("onl_city").Name;
+                            if (entity.Attributes.Contains("onl_city"))
                             {
-                                Entity _saf = new Entity("onl_saf");
-                                _saf.Id = SAF.Id;
-                                _saf["onl_status"] = new OptionSetValue(122050003);
-                                // _saf["onl_orgcreationresponseonl"] = true;
-                                service.Update(_saf);
+                                Entity Sitecity = service.Retrieve("alletech_city", entity.GetAttributeValue<EntityReference>("onl_city").Id, new ColumnSet("alletech_cityno"));
+                                shipsitecity = Sitecity.GetAttributeValue<String>("alletech_cityno");
+                                shipsitecity = string.IsNullOrWhiteSpace(shipsitecity) ? "0" : shipsitecity;
+                            }
+                            if (entity.Attributes.Contains("onl_state"))
+                            {
+                                Entity state = service.Retrieve("alletech_state", entity.GetAttributeValue<EntityReference>("onl_state").Id, new ColumnSet("alletech_statename"));
+                                shipToState = state.GetAttributeValue<String>("alletech_statename");
+                            }
+                            if (entity.Attributes.Contains("spectra_pincode"))
+                                shipToPincode = entity.GetAttributeValue<String>("spectra_pincode");
+                            string SiteAddress = entity.GetAttributeValue<String>("onl_address");
+                            //City domain based on sitecity and product 
+                            QueryExpression querydom = new QueryExpression();
+                            querydom.EntityName = "alletech_domain";
+                            querydom.ColumnSet.AddColumns("alletech_name", "alletech_domain_id");
+                            querydom.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
+                            querydom.Criteria.AddCondition("pcl_city", ConditionOperator.Equal, sitecity);
+                            EntityCollection result1 = service.RetrieveMultiple(querydom);
+                            Entity domainentity = result1.Entities[0];
+                            if (domainentity.Attributes.Contains("alletech_domain_id"))
+                                childDomainId = domainentity.Attributes["alletech_domain_id"].ToString();
+
+                            #region Reevenue group Entity record
+                            QueryExpression queryConfig = new QueryExpression("alletech_revenuegroup");
+                            queryConfig.ColumnSet = new ColumnSet(true);
+                            queryConfig.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
+                            queryConfig.Criteria.AddCondition("alletech_name", ConditionOperator.Equal, sitecityname);
+                            EntityCollection RevenuegroupCollection = service.RetrieveMultiple(queryConfig);
+
+                            Entity Rev = RevenuegroupCollection.Entities[0];
+                            if (RevenuegroupCollection.Entities.Count > 0)
+                            {
+                                // Entity Rev = RevenuegroupCollection.Entities[0]; 
+                                if (Rev.Attributes.Contains("alletech_id"))
+                                {
+                                    CafInsCityRevGrpId = Rev.GetAttributeValue<string>("alletech_id");
+                                }
+                                if (Rev.Attributes.Contains("alletech_revenuecoagroupid"))
+                                {
+                                    coaGroupNo = Rev.GetAttributeValue<int>("alletech_revenuecoagroupid").ToString();
+                                }
+                                if (Rev.Attributes.Contains("alletech_coano"))
+                                {
+                                    coaNo = Rev.GetAttributeValue<int>("alletech_coano").ToString();
+                                }
+                                if (Rev.Attributes.Contains("alletech_ledgerbookno"))
+                                {
+                                    ledgerBookNo = Rev.GetAttributeValue<int>("alletech_ledgerbookno").ToString();
+                                }
+                                if (Rev.Attributes.Contains("alletech_ledgerparentid"))
+                                {
+                                    ledgerParentId = Rev.GetAttributeValue<int>("alletech_ledgerparentid").ToString();
+                                }
+
+                                if (Rev.Attributes.Contains("alletech_placeofconsumptionid"))
+                                {
+                                    placeOfConsumptionId = Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString();
+
+                                }
+                                if (Rev.Attributes.Contains("alletech_receiptledgeraccountno"))
+                                {
+                                    receiptLedgerAccountNo = Rev.GetAttributeValue<int>("alletech_receiptledgeraccountno").ToString();
+                                }
                             }
                             #endregion
+
+                            var sitename = entity.GetAttributeValue<String>("spectra_customername");
+                            string[] ssizefullnmae = sitename.Split(null);
+                            if (ssizefullnmae.Length > 1)
+                            {
+                                firstName = ssizefullnmae[0];
+                                for (int k = 1; k < ssizefullnmae.Length; k++)
+                                {
+                                    lastnameAccShip = lastnameAccShip + " " + ssizefullnmae[k];
+                                }
+                            }
+                            else
+                                firstName = ssizefullnmae[0];
+
+                            #endregion
+
+                            #region start xml  
+                            requestXml = "";
+                            requestXml += "<CRMCAFRequest>" +
+                            "<CAF_No>" + SafNo + "</CAF_No>" +
+                            "<CAN_No>" + CanNo + "</CAN_No>";
+                            if (rowcount == 1)
+                            {
+                                #region OrganisationRequest & ChildOrganisationRequest
+                                requestXml += "<OrganisationRequest>" +
+                                "<customer>true</customer>" +
+                                "<domain>" + childDomainId + "</domain>" +
+                                "<name>" + childName + "</name>" +
+                                "<shortName>" + paccshort + "</shortName>" +
+                                "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
+                                "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
+                                "<societyName>"+ Buildingname + "</societyName>" +
+                                "<areaName>"+ areaname + "</areaName>" +
+                                "<societyFieldId>2</societyFieldId>" +
+                                "<areaFieldId>3</areaFieldId>" +
+                                "<productSegmentNo>6</productSegmentNo>" +
+                                "<verticalSegmentNo>8</verticalSegmentNo>" +
+                                "<industryTypeNo>" + industryname + "</industryTypeNo>" +
+                                "</OrganisationRequest>";
+                               
+
+
+                                requestXml += "<ChildOrganisationRequest>" +
+                                "<customer>true</customer>" +
+                                "<domain>" + childDomainId + "</domain>" +
+                                "<name>" + childName + "</name>" +
+                                "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
+                                "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
+                                "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
+                               "<societyName>" + Buildingname + "</societyName>" +
+                                "<areaName>" + areaname + "</areaName>" +
+                                "<societyFieldId>2</societyFieldId>" +
+                                "<areaFieldId>3</areaFieldId>" +
+                                "<productSegmentNo>6</productSegmentNo>" +
+                                "<verticalSegmentNo>8</verticalSegmentNo>" +
+                                "<industryTypeNo>" + industryname + "</industryTypeNo>" +
+                                "</ChildOrganisationRequest>";
+                                #endregion
+                            }
+                            else
+                            {
+                                System.Threading.Thread.Sleep(8000);//Just Wait for 5 seconds for  unify response  
+                                Entity Parent_accountid = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_accountid"));
+                                string ExistingCanNo = Parent_accountid.GetAttributeValue<String>("alletech_accountid");//Existing can id on behalf of opportunity id
+
+                                string  account_unifyparentno = GetParentNo(service, ExistingCanNo);//Getting Unify Account No(parent no) on behalf of account
+
+                                requestXml += "<ChildOrganisationRequest>" +
+                               "<customer>true</customer>" +
+                               "<domain>" + childDomainId + "</domain>" +
+                               "<name>" + childName + "</name>" +
+                               "<parentNo>" + account_unifyparentno + "</parentNo>" +
+                               "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
+                               "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
+                               "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
+                              "<societyName>" + Buildingname + "</societyName>" +
+                                "<areaName>" + areaname + "</areaName>" +
+                               "<societyFieldId>2</societyFieldId>" +
+                               "<areaFieldId>3</areaFieldId>" +
+                               "<productSegmentNo>6</productSegmentNo>" +
+                               "<verticalSegmentNo>8</verticalSegmentNo>" +
+                               "<industryTypeNo>" + industryname + "</industryTypeNo>" +
+                               "</ChildOrganisationRequest>";
+                            }
+                            #region Contact details
+
+                            #region Billing
+                            requestXml += "<ContactDetails>" +
+                            "<cityNo>" + billCityId + "</cityNo>" +
+                            "<contactTypeNo>1</contactTypeNo>" +
+                            "<firstName>" + firstnameAccShip + "</firstName>";
+                            if (!String.IsNullOrEmpty(lastName))
+                                requestXml = requestXml + "<lastName>" + lastName + "</lastName>";
+                            requestXml += "<salutationNo>" + salutation + "</salutationNo>" +
+                            "<pin>" + billToPincode + "</pin>" +
+                            "<state>" + billToState + "</state>" +
+                            "<street>" + billtostreetcomplete + "</street>" +
+                            "</ContactDetails>" +
+                            #endregion
+
+                            #region  Shipping Address
+                                "<ContactDetails>" +
+                           "<cityNo>" + shipsitecity + "</cityNo>" +
+                            "<contactTypeNo>2</contactTypeNo>" +
+                            "<firstName>" + firstName + "</firstName>";
+
+                            if (!String.IsNullOrEmpty(lastnameAccShip))
+                                requestXml = requestXml + "<lastName>" + lastnameAccShip + "</lastName>";
+
+                            requestXml = requestXml +
+                            "<salutationNo>" + salutation + "</salutationNo>" +
+                            "<pin>" + shipToPincode + "</pin>" +
+                            "<state>" + shipToState + "</state>" +
+                            "<street>" + SiteAddress + "</street>" +
+                            "</ContactDetails>";
+                            #endregion
+
+                            #endregion
+
+
+                            #region Bill  to communication
+                            if (Email != null)
+                            {
+                                requestXml = requestXml + "<commMode>" +
+                                "<commTypeNo>4</commTypeNo>" +
+                                //"<contactNo></contactNo>" +     //  ----- bill email
+                                "<isDefault>false</isDefault>" +
+                                "<dnc>false</dnc>" +
+                                "<ident>" + Email + "</ident>" +
+                                "<contactType>BillTo</contactType>" +
+                                "</commMode>";
+                            }
+
+                            if (Mobile != "")
+                            {
+                                requestXml = requestXml +
+                                "<commMode>" + "<commTypeNo>2</commTypeNo>" +
+                                // "<contactNo></contactNo>" +     //  ----- bill phone
+                                "<isDefault>false</isDefault>" +
+                                "<dnc>false</dnc>" +
+                                "<ident>" + Mobile + "</ident>" +
+                                "<contactType>BillTo</contactType>" +
+                                "</commMode>";
+                            }
+
+                            if (Facebook != "")
+                            {
+                                requestXml = requestXml +
+                                "<commMode>" +
+                                "<commTypeNo>8</commTypeNo>" +
+                                //"<contactNo></contactNo>" +     //  ----- bill to fb
+                                "<isDefault>false</isDefault>" +
+                                "<dnc>false</dnc>" +
+                                "<ident>" + Facebook + "</ident>" +
+                                "<contactType>BillTo</contactType>" +
+                                "</commMode>";
+                            }
+
+                            if (Twitter != "")
+                            {
+                                requestXml = requestXml +
+                                "<commMode>" +
+                                "<commTypeNo>7</commTypeNo>" +
+                                //"<contactNo></contactNo>" +     //  ----- bill to twitter
+                                "<isDefault>false</isDefault>" +
+                                "<dnc>false</dnc>" +
+                                "<ident>" + Twitter + "</ident>" +
+                                "<contactType>BillTo</contactType>" +
+                                "</commMode>";
+                            }
+                            #endregion
+
+                            #region Ship to communication
+                            if (Email != "")
+                            {
+                                requestXml = requestXml +
+                                "<commMode>" +
+                                "<commTypeNo>4</commTypeNo>" +
+                                //"<contactNo></contactNo>" +     //  ----- ship to email
+                                "<isDefault>false</isDefault>" +
+                                "<dnc>false</dnc>" +
+                                "<ident>" + entity.GetAttributeValue<String>("onl_customeremailaddress") + "</ident>" +
+                                "<contactType>ShipTo</contactType>" +
+                                "</commMode>";
+                            }
+
+                            if (Mobile != "")
+                            {
+                                requestXml = requestXml +
+                                "<commMode>" +
+                                "<commTypeNo>2</commTypeNo>" +
+                                //"<contactNo></contactNo>" +     //  ----- ship to phone
+                                "<isDefault>false</isDefault>" +
+                                "<dnc>false</dnc>" +
+                                "<ident>" + entity.GetAttributeValue<String>("onl_ol_customercontactnumber") + "</ident>" +
+                                "<contactType>ShipTo</contactType>" +
+                                "</commMode>";
+                            }
+                            #endregion
+
+                            #region Ledger request 
+                            requestXml = requestXml +
+                            "<LedgerRequest>" +
+                            "<coaGroupNo>" + coaGroupNo + "</coaGroupNo>" +
+                            "<coaNo>" + coaNo + "</coaNo>" +
+                            "<currencyISO>INR</currencyISO>" +
+                            "<ledgerAccountTypeNo>3</ledgerAccountTypeNo>" +
+                            "<ledgerBookNo>" + ledgerBookNo + "</ledgerBookNo>" +
+                            "<name>" + childName + "</name>" +
+                            "<parentId>" + ledgerParentId + "</parentId>" +
+
+                            "<paymentAmnt>" + paymentAmount + "</paymentAmnt>" +
+                            "<securityAmnt>" + securityAmount + "</securityAmnt>" +
+                            "<paymentType>" + paymentType + "</paymentType>" +
+                            "<depositType>" + securityDepositType + "</depositType>" +
+                            "<paymentDate>" + paymentDate + "</paymentDate>" +
+                            "<chequeNo>" + chequeNo + "</chequeNo>" +
+                            "<bankNo>" + bankNo + "</bankNo>" +
+                            "<bankBranch>" + banBranch + "</bankBranch>" +
+                            "<gst>" + Gst + "</gst>" +
+                            "<pan>" + Pan + "</pan>" +
+                            "<tan>" + Tan + "</tan>" +
+                            "</LedgerRequest>" +
+                            #endregion
+
+                            #region serviceGroup 
+                                "<serviceGroup>" +
+                            "<actcat>2</actcat>" +
+                            "<actid>" + CanNo + "</actid>" +
+                            "<actname>" + childName + "</actname>" +
+                            "<domno>" + childDomainId + "</domno>" +
+                            "<placeOfConsumptionId>" + Rev.GetAttributeValue<int>("alletech_placeofconsumptionid").ToString() + "</placeOfConsumptionId>" +
+                            "</serviceGroup>" +
+                            #endregion
+
+                            #region SessionObject
+                    "<SessionObject>" +
+                            "<credentialId>1</credentialId>" +
+                            "<ipAddress>22.23.25.12</ipAddress>" +
+                            "<source>CRM</source>" +
+                            "<userName>crm.admin</userName>" +
+                            "<userType>123</userType>" +
+                            "<usrNo>10651</usrNo>" +
+                            "</SessionObject>" +
+                            "</CRMCAFRequest>";
+                            #endregion
+
+
+                            if (requestXml.Contains("&"))
+                            {
+                                requestXml = requestXml.Replace("&", "&amp;");
+                            }
+
+
+                            var B2Buri = new Uri("http://jbossuat.spectranet.in:9001/rest/getCustomer/");
+                            var uri = B2Buri;
+
+                            Byte[] requestByte = Encoding.UTF8.GetBytes(requestXml);
+
+                            WebRequest request = WebRequest.Create(uri);
+                            request.Method = WebRequestMethods.Http.Post;
+                            request.ContentLength = requestByte.Length;
+                            request.ContentType = "text/xml; encoding='utf-8'";
+                            request.GetRequestStream().Write(requestByte, 0, requestByte.Length);
+
+                            // 
+                            #region Response validation
+                            try
+                            {
+                                if (context.Depth == 1)
+                                {
+                                    using (var response = request.GetResponse())
+                                    {
+                                        XmlDocument xmlDoc = new XmlDocument();
+                                        xmlDoc.Load(response.GetResponseStream());
+                                        string tmp = xmlDoc.InnerXml.ToString();
+
+                                        string CAF_No, CAN_No, Code, Message;
+                                        #region To create Integration Log from Response
+                                        XmlNodeList node1 = xmlDoc.GetElementsByTagName("CRMCAFResponse");
+                                        for (int i = 0; i <= node1.Count - 1; i++)
+                                        {
+                                            CAF_No = node1[i].ChildNodes.Item(0).InnerText.Trim();
+                                            CAN_No = node1[i].ChildNodes.Item(1).InnerText.Trim();
+                                            Code = node1[i].ChildNodes.Item(2).InnerText.Trim();
+                                            Message = node1[i].ChildNodes.Item(3).InnerText.Trim();
+                                            Entity IntegrationLog = new Entity("alletech_integrationlog_enterprise");
+                                            IntegrationLog["alletech_cafno"] = CAF_No;
+                                            IntegrationLog["alletech_canno"] = CAN_No;
+                                            IntegrationLog["alletech_code"] = Code;
+                                            IntegrationLog["alletech_message"] = Message;
+
+                                            IntegrationLog["alletech_name"] = "Approved_" + CAF_No + "_" + CAN_No;
+
+                                            IntegrationLog["alletech_responsetype"] = new OptionSetValue(2);
+                                            IntegrationLog["alletech_approvalrequest"] = requestXml;
+                                            Guid Siteguid = entity.Id;
+                                            Guid safid = SAF.Id;
+                                            //add site lookup 
+                                            IntegrationLog["spectra_siteidid"] = new EntityReference("onl_customersite", Siteguid);
+                                            // IntegrationLog["alletech_can"] = new EntityReference("onl_saf", SAF.Id);
+                                            IntegrationLog["onl_safid"] = new EntityReference("onl_saf", safid);
+                                            service.Create(IntegrationLog);
+                                            flag = true;
+                                        }
+                                        #endregion
+                                    }
+                                    if (flag == true)
+                                    {
+                                        #region Update Customer Site Details 
+                                        Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_parentaccout", "spectra_siteaccountno", "spectra_siteresponse", "spectra_siteuserpassword"));
+
+                                        ConditionExpression conditionacc = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, CanNo);
+                                        FilterExpression filteracc = new FilterExpression();
+                                        filteracc.AddCondition(conditionacc);
+                                        filteracc.FilterOperator = LogicalOperator.And;
+                                        QueryExpression queryacc = new QueryExpression
+                                        {
+                                            EntityName = "account",
+                                            ColumnSet = new ColumnSet(true),
+                                            Criteria = filter,
+                                        };
+                                        EntityCollection childAccountC = service.RetrieveMultiple(queryacc);
+                                        if (childAccountC.Entities.Count == 0)
+                                            return;
+                                        Entity childPAccount = childAccountC.Entities[0];
+                                        Guid pacid = childPAccount.Id;
+
+                                        Sites["spectra_parentaccout"] = new EntityReference("account", pacid);
+                                        Sites["spectra_siteaccountno"] = CanNo;
+                                        Sites["spectra_siteresponse"] = "true";
+                                        Sites["spectra_siteuserpassword"] = CreateRandomPasswordWithRandomLength(8);
+                                        service.Update(Sites);
+                                        #endregion
+                                    }
+                                    else
+                                    {
+                                        Entity Sites = service.Retrieve("onl_customersite", entity.Id, new ColumnSet("spectra_siteaccountno", "spectra_siteresponse"));
+                                        Sites["spectra_siteaccountno"] = CanNo;
+                                        Sites["spectra_siteresponse"] = "false";
+                                        service.Update(Sites);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidPluginExecutionException(ex.Message);
+                            }
+                            #endregion
+                            #endregion
+                            rowcount++;
+
                         }
-                        else
+                        if (context.Depth == 1)
                         {
-                            //New Sites Created 
+                            Entity _saf = new Entity("onl_saf");
+                            _saf.Id = SAF.Id;
+                            _saf["onl_status"] = new OptionSetValue(122050003);
+                            // _saf["onl_orgcreationresponseonl"] = true;
+                            service.Update(_saf);
                         }
+                        #endregion
+                        //}
+                        //else
+                        //{
+                        //    //New Sites Created 
+                        //}
                     }
                     //}
                 }
             }
             catch (Exception e)
             {
-
-
                 throw new InvalidPluginExecutionException(e.Message);
             }
         }
-        public static string GetParentNo(IOrganizationService service, string CanId)
+        public static string GetParentNo(IOrganizationService service, string AccountCanId)
         {
             string parentnoid = string.Empty;
-            ConditionExpression conditionp = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, CanId);
+            ConditionExpression conditionp = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, AccountCanId);
             FilterExpression filter = new FilterExpression();
             filter.AddCondition(conditionp);
             filter.FilterOperator = LogicalOperator.And;
@@ -1291,8 +1194,8 @@ namespace SAFCRMUnifyIntegration
 
             if (ParentAccEc.Entities.Count > 0)
             {
-                Entity ParentAccount = ParentAccEc.Entities[0];
-                parentnoid = ParentAccount.GetAttributeValue<string>("alletech_accountno");
+                Entity ChildParentAccount = ParentAccEc.Entities[0];
+                parentnoid = ChildParentAccount.GetAttributeValue<string>("alletech_accountno");
             }
             return parentnoid;
         }
@@ -1302,12 +1205,7 @@ namespace SAFCRMUnifyIntegration
             // Create a string of characters, numbers, special characters that allowed in the password  
             string validChars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*?_-";
             Random random = new Random();
-
-            // Minimum size 8. Max size is number of all allowed chars.  
-            //  int size = random.Next(8, validChars.Length);
-
-            // Select one random character at a time from the string  
-            // and create an array of chars  
+                     
             char[] chars = new char[Length];
             for (int i = 0; i < Length; i++)
             {
@@ -1349,13 +1247,6 @@ namespace SAFCRMUnifyIntegration
             if (context.Depth == 1)
             {
                 EntityReference childAccountDomain = null;
-                //Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
-                //String canId = String.Empty;
-
-                //if (SAF.Attributes.Contains("onl_spectra_accountid"))
-                //    canId = SAF.GetAttributeValue<String>("onl_spectra_accountid");
-
-
                 ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, canId);
                 FilterExpression filter = new FilterExpression();
                 filter.AddCondition(condition);
@@ -1374,23 +1265,25 @@ namespace SAFCRMUnifyIntegration
                 // check if Parent account, existing on Child has Unify ID
                 if (!childAccount.Attributes.Contains("parentaccountid"))
                 {
-                    Entity parentAccount = new Entity("account");
+                    Entity ChildParentAccount = new Entity("account");
 
                     if (childAccount.Attributes.Contains("alletech_domain"))
                     {
                         tracingService.Trace("child account contains domain");
-                        parentAccount["alletech_domain"] = childAccount.GetAttributeValue<EntityReference>("alletech_domain");
+                        ChildParentAccount["alletech_domain"] = childAccount.GetAttributeValue<EntityReference>("alletech_domain");
                         childAccountDomain = childAccount.GetAttributeValue<EntityReference>("alletech_domain");
                         tracingService.Trace("domain : " + childAccountDomain.Name);
                     }
                     else
                     {
 
-                        childAccountDomain = retrieveDomain(childAccount.GetAttributeValue<EntityReference>("alletech_city").Id, service);
+                        EntityReference cityid = childAccount.GetAttributeValue<EntityReference>("alletech_city");
+
+                        childAccountDomain = retrieveDomain(cityid.Id, service, Productsegmentid);
 
                         if (childAccountDomain != null)
                         {
-                            parentAccount["alletech_domain"] = childAccountDomain;
+                            ChildParentAccount["alletech_domain"] = childAccountDomain;
                             tracingService.Trace("domain : " + childAccountDomain.Id);
                         }
                         else
@@ -1405,58 +1298,57 @@ namespace SAFCRMUnifyIntegration
 
 
                     if (childAccount.Attributes.Contains("alletech_salutation"))
-                        parentAccount["alletech_salutation"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_salutation");
+                        ChildParentAccount["alletech_salutation"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_salutation");
                     if (childAccount.Attributes.Contains("alletech_subbusinesssegment"))
-                        parentAccount["alletech_subbusinesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_subbusinesssegment");
+                        ChildParentAccount["alletech_subbusinesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_subbusinesssegment");
                     if (childAccount.Attributes.Contains("alletech_amountcharged"))
-                        parentAccount["alletech_amountcharged"] = childAccount.GetAttributeValue<Money>("alletech_amountcharged");
+                        ChildParentAccount["alletech_amountcharged"] = childAccount.GetAttributeValue<Money>("alletech_amountcharged");
                     if (childAccount.Attributes.Contains("alletech_businesssegment"))
-                        parentAccount["alletech_businesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_businesssegment");
+                        ChildParentAccount["alletech_businesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_businesssegment");
                     if (childAccount.Attributes.Contains("alletech_industry"))
-                        parentAccount["alletech_industry"] = childAccount.GetAttributeValue<EntityReference>("alletech_industry");
+                        ChildParentAccount["alletech_industry"] = childAccount.GetAttributeValue<EntityReference>("alletech_industry");
                     if (childAccount.Attributes.Contains("alletech_firmtype"))
-                        parentAccount["alletech_firmtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_firmtype");
+                        ChildParentAccount["alletech_firmtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_firmtype");
                     if (childAccount.Attributes.Contains("alletech_activationdate"))
-                        parentAccount["alletech_activationdate"] = childAccount.GetAttributeValue<DateTime>("alletech_activationdate");
+                        ChildParentAccount["alletech_activationdate"] = childAccount.GetAttributeValue<DateTime>("alletech_activationdate");
                     if (childAccount.Attributes.Contains("alletech_channelpartner"))
-                        parentAccount["alletech_channelpartner"] = childAccount.GetAttributeValue<EntityReference>("alletech_channelpartner");
+                        ChildParentAccount["alletech_channelpartner"] = childAccount.GetAttributeValue<EntityReference>("alletech_channelpartner");
                     if (childAccount.Attributes.Contains("alletech_product"))
-                        parentAccount["alletech_product"] = childAccount.GetAttributeValue<EntityReference>("alletech_product");
+                        ChildParentAccount["alletech_product"] = childAccount.GetAttributeValue<EntityReference>("alletech_product");
                     if (childAccount.Attributes.Contains(""))
 
                         tracingService.Trace("before string attributes");
 
                     if (childAccount.Attributes.Contains("name"))
-                        parentAccount["name"] = childAccount.GetAttributeValue<String>("name");
-                    if (childAccount.Attributes.Contains("alletech_unifyshortname"))
-                        parentAccount["alletech_unifyshortname"] = childAccount.GetAttributeValue<String>("alletech_unifyshortname");
+                        ChildParentAccount["name"] = childAccount.GetAttributeValue<String>("name");
+                    //if (childAccount.Attributes.Contains("alletech_unifyshortname"))
+                    //    ChildParentAccount["alletech_unifyshortname"] = childAccount.GetAttributeValue<String>("alletech_unifyshortname");
                     if (childAccount.Attributes.Contains("alletech_accountshortname"))
-                        parentAccount["alletech_accountshortname"] = childAccount.GetAttributeValue<String>("alletech_accountshortname");
+                        ChildParentAccount["alletech_accountshortname"] = childAccount.GetAttributeValue<String>("alletech_accountshortname");
                     if (childAccount.Attributes.Contains("emailaddress1"))
-                        parentAccount["emailaddress1"] = childAccount.GetAttributeValue<String>("emailaddress1");
+                        ChildParentAccount["emailaddress1"] = childAccount.GetAttributeValue<String>("emailaddress1");
                     if (childAccount.Attributes.Contains("alletech_transactionid"))
-                        parentAccount["alletech_transactionid"] = childAccount.GetAttributeValue<String>("alletech_transactionid");
+                        ChildParentAccount["alletech_transactionid"] = childAccount.GetAttributeValue<String>("alletech_transactionid");
                     if (childAccount.Attributes.Contains("alletech_emailid"))
-                        parentAccount["alletech_emailid"] = childAccount.GetAttributeValue<String>("alletech_emailid");
+                        ChildParentAccount["alletech_emailid"] = childAccount.GetAttributeValue<String>("alletech_emailid");
                     if (childAccount.Attributes.Contains("alletech_companyname"))
-                        parentAccount["alletech_companyname"] = childAccount.GetAttributeValue<String>("alletech_companyname");
+                        ChildParentAccount["alletech_companyname"] = childAccount.GetAttributeValue<String>("alletech_companyname");
                     if (childAccount.Attributes.Contains("alletech_facebookid"))
-                        parentAccount["alletech_facebookid"] = childAccount.GetAttributeValue<String>("alletech_facebookid");
+                        ChildParentAccount["alletech_facebookid"] = childAccount.GetAttributeValue<String>("alletech_facebookid");
                     if (childAccount.Attributes.Contains("alletech_companynamehome"))
-                        parentAccount["alletech_companynamehome"] = childAccount.GetAttributeValue<String>("alletech_companynamehome");
+                        ChildParentAccount["alletech_companynamehome"] = childAccount.GetAttributeValue<String>("alletech_companynamehome");
                     if (childAccount.Attributes.Contains("alletech_twitterid"))
-                        parentAccount["alletech_twitterid"] = childAccount.GetAttributeValue<String>("alletech_twitterid");
+                        ChildParentAccount["alletech_twitterid"] = childAccount.GetAttributeValue<String>("alletech_twitterid");
                     if (childAccount.Attributes.Contains("alletech_paymentid"))
-                        parentAccount["alletech_paymentid"] = childAccount.GetAttributeValue<String>("alletech_paymentid");
+                        ChildParentAccount["alletech_paymentid"] = childAccount.GetAttributeValue<String>("alletech_paymentid");
                     if (childAccount.Attributes.Contains("alletech_mobilephone"))
-                        parentAccount["alletech_mobilephone"] = childAccount.GetAttributeValue<String>("alletech_mobilephone");
+                        ChildParentAccount["alletech_mobilephone"] = childAccount.GetAttributeValue<String>("alletech_mobilephone");
                     if (childAccount.Attributes.Contains("telephone1"))
-                        parentAccount["telephone1"] = childAccount.GetAttributeValue<String>("telephone1");
+                        ChildParentAccount["telephone1"] = childAccount.GetAttributeValue<String>("telephone1");
 
                     if (childAccount.Attributes.Contains("websiteurl"))
-                        parentAccount["websiteurl"] = childAccount.GetAttributeValue<String>("websiteurl");
-                    if (childAccount.Attributes.Contains("alletech_address"))
-                        parentAccount["alletech_address"] = childAccount.GetAttributeValue<String>("alletech_address");
+                        ChildParentAccount["websiteurl"] = childAccount.GetAttributeValue<String>("websiteurl");
+                   
 
                     tracingService.Trace("after string attributes");
                     #endregion
@@ -1466,52 +1358,52 @@ namespace SAFCRMUnifyIntegration
                     tracingService.Trace(" In Account Address attributes");
                     #region New Added Code
                     if (childAccount.Attributes.Contains("primarycontactid"))
-                        parentAccount["primarycontactid"] = childAccount.GetAttributeValue<EntityReference>("primarycontactid");
+                        ChildParentAccount["primarycontactid"] = childAccount.GetAttributeValue<EntityReference>("primarycontactid");
                     if (childAccount.Attributes.Contains("alletech_ship_specifyarea"))
-                        parentAccount["alletech_ship_specifyarea"] = childAccount.GetAttributeValue<string>("alletech_ship_specifyarea");
+                        ChildParentAccount["alletech_ship_specifyarea"] = childAccount.GetAttributeValue<string>("alletech_ship_specifyarea");
                     if (childAccount.Attributes.Contains("alletech_ship_phonetypeno"))
-                        parentAccount["alletech_ship_phonetypeno"] = childAccount.GetAttributeValue<int>("alletech_ship_phonetypeno");
+                        ChildParentAccount["alletech_ship_phonetypeno"] = childAccount.GetAttributeValue<int>("alletech_ship_phonetypeno");
                     if (childAccount.Attributes.Contains("alletech_ship_emailtypeno"))
-                        parentAccount["alletech_ship_emailtypeno"] = childAccount.GetAttributeValue<int>("alletech_ship_emailtypeno");
+                        ChildParentAccount["alletech_ship_emailtypeno"] = childAccount.GetAttributeValue<int>("alletech_ship_emailtypeno");
                     if (childAccount.Attributes.Contains("alletech_buildingname"))
-                        parentAccount["alletech_buildingname"] = childAccount.GetAttributeValue<EntityReference>("alletech_buildingname");
+                        ChildParentAccount["alletech_buildingname"] = childAccount.GetAttributeValue<EntityReference>("alletech_buildingname");
                     if (childAccount.Attributes.Contains("alletech_ship_specifybuilding"))
-                        parentAccount["alletech_ship_specifybuilding"] = childAccount.GetAttributeValue<string>("alletech_ship_specifybuilding");
+                        ChildParentAccount["alletech_ship_specifybuilding"] = childAccount.GetAttributeValue<string>("alletech_ship_specifybuilding");
                     if (childAccount.Attributes.Contains("alletech_ship_contactid"))
-                        parentAccount["alletech_ship_contactid"] = childAccount.GetAttributeValue<string>("alletech_ship_contactid");
+                        ChildParentAccount["alletech_ship_contactid"] = childAccount.GetAttributeValue<string>("alletech_ship_contactid");
                     #endregion
 
                     tracingService.Trace("after newly added code in Account address");
                     if (childAccount.Attributes.Contains("alletech_buildingnoplotno"))
-                        parentAccount["alletech_buildingnoplotno"] = childAccount.GetAttributeValue<String>("alletech_buildingnoplotno");
+                        ChildParentAccount["alletech_buildingnoplotno"] = childAccount.GetAttributeValue<String>("alletech_buildingnoplotno");
                     if (childAccount.Attributes.Contains("alletech_blocknumbertowernumber"))
-                        parentAccount["alletech_blocknumbertowernumber"] = childAccount.GetAttributeValue<String>("alletech_blocknumbertowernumber");
+                        ChildParentAccount["alletech_blocknumbertowernumber"] = childAccount.GetAttributeValue<String>("alletech_blocknumbertowernumber");
                     if (childAccount.Attributes.Contains("alletech_block"))
-                        parentAccount["alletech_block"] = childAccount.GetAttributeValue<String>("alletech_block");
+                        ChildParentAccount["alletech_block"] = childAccount.GetAttributeValue<String>("alletech_block");
                     if (childAccount.Attributes.Contains("alletech_houseflatnumber"))
-                        parentAccount["alletech_houseflatnumber"] = childAccount.GetAttributeValue<String>("alletech_houseflatnumber");
+                        ChildParentAccount["alletech_houseflatnumber"] = childAccount.GetAttributeValue<String>("alletech_houseflatnumber");
                     if (childAccount.Attributes.Contains("alletech_locality"))
-                        parentAccount["alletech_locality"] = childAccount.GetAttributeValue<String>("alletech_locality");
+                        ChildParentAccount["alletech_locality"] = childAccount.GetAttributeValue<String>("alletech_locality");
                     if (childAccount.Attributes.Contains("alletech_buildingtype"))
-                        parentAccount["alletech_buildingtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_buildingtype");
+                        ChildParentAccount["alletech_buildingtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_buildingtype");
                     if (childAccount.Attributes.Contains("alletech_floor"))
-                        parentAccount["alletech_floor"] = childAccount.GetAttributeValue<String>("alletech_floor");
+                        ChildParentAccount["alletech_floor"] = childAccount.GetAttributeValue<String>("alletech_floor");
                     if (childAccount.Attributes.Contains("alletech_street"))
-                        parentAccount["alletech_street"] = childAccount.GetAttributeValue<String>("alletech_street");
+                        ChildParentAccount["alletech_street"] = childAccount.GetAttributeValue<String>("alletech_street");
                     if (childAccount.Attributes.Contains("alletech_landmarkifany"))
-                        parentAccount["alletech_landmarkifany"] = childAccount.GetAttributeValue<String>("alletech_landmarkifany");
+                        ChildParentAccount["alletech_landmarkifany"] = childAccount.GetAttributeValue<String>("alletech_landmarkifany");
                     if (childAccount.Attributes.Contains("alletech_country"))
-                        parentAccount["alletech_country"] = childAccount.GetAttributeValue<EntityReference>("alletech_country");
+                        ChildParentAccount["alletech_country"] = childAccount.GetAttributeValue<EntityReference>("alletech_country");
                     if (childAccount.Attributes.Contains("alletech_state"))
-                        parentAccount["alletech_state"] = childAccount.GetAttributeValue<EntityReference>("alletech_state");
+                        ChildParentAccount["alletech_state"] = childAccount.GetAttributeValue<EntityReference>("alletech_state");
                     if (childAccount.Attributes.Contains("alletech_city"))
-                        parentAccount["alletech_city"] = childAccount.GetAttributeValue<EntityReference>("alletech_city");
+                        ChildParentAccount["alletech_city"] = childAccount.GetAttributeValue<EntityReference>("alletech_city");
                     if (childAccount.Attributes.Contains("alletech_zippostalcode"))
-                        parentAccount["alletech_zippostalcode"] = childAccount.GetAttributeValue<String>("alletech_zippostalcode");
+                        ChildParentAccount["alletech_zippostalcode"] = childAccount.GetAttributeValue<String>("alletech_zippostalcode");
                     if (childAccount.Attributes.Contains("alletech_area"))
-                        parentAccount["alletech_area"] = childAccount.GetAttributeValue<EntityReference>("alletech_area");
+                        ChildParentAccount["alletech_area"] = childAccount.GetAttributeValue<EntityReference>("alletech_area");
                     if (childAccount.Attributes.Contains("alletech_lcoarea"))
-                        parentAccount["alletech_lcoarea"] = childAccount.GetAttributeValue<String>("alletech_lcoarea");
+                        ChildParentAccount["alletech_lcoarea"] = childAccount.GetAttributeValue<String>("alletech_lcoarea");
                     #endregion
 
                     #region Bill Address
@@ -1519,50 +1411,59 @@ namespace SAFCRMUnifyIntegration
                     tracingService.Trace("In bill Address section");
                     #region New Added Code
                     if (childAccount.Attributes.Contains("alletech_contactname"))
-                        parentAccount["alletech_contactname"] = childAccount.GetAttributeValue<string>("alletech_contactname");
+                        ChildParentAccount["alletech_contactname"] = childAccount.GetAttributeValue<string>("alletech_contactname");
                     if (childAccount.Attributes.Contains("alletech_shippingemailid"))
-                        parentAccount["alletech_shippingemailid"] = childAccount.GetAttributeValue<string>("alletech_shippingemailid");
+                        ChildParentAccount["alletech_shippingemailid"] = childAccount.GetAttributeValue<string>("alletech_shippingemailid");
                     if (childAccount.Attributes.Contains("alletech_mobilephone2"))
-                        parentAccount["alletech_mobilephone2"] = childAccount.GetAttributeValue<string>("alletech_mobilephone2");
+                        ChildParentAccount["alletech_mobilephone2"] = childAccount.GetAttributeValue<string>("alletech_mobilephone2");
                     #endregion
 
                     if (childAccount.Attributes.Contains("alletech_bill_countrymain"))
-                        parentAccount["alletech_bill_countrymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_countrymain");
+                        ChildParentAccount["alletech_bill_countrymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_countrymain");
                     if (childAccount.Attributes.Contains("alletech_bill_statemain"))
-                        parentAccount["alletech_bill_statemain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_statemain");
+                        ChildParentAccount["alletech_bill_statemain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_statemain");
                     if (childAccount.Attributes.Contains("alletech_bill_citymain"))
-                        parentAccount["alletech_bill_citymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_citymain");
+                        ChildParentAccount["alletech_bill_citymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_citymain");
                     if (childAccount.Attributes.Contains("alletech_bill_pincode"))
-                        parentAccount["alletech_bill_pincode"] = childAccount.GetAttributeValue<String>("alletech_bill_pincode");
+                        ChildParentAccount["alletech_bill_pincode"] = childAccount.GetAttributeValue<String>("alletech_bill_pincode");
                     if (childAccount.Attributes.Contains("alletech_bill_areamain"))
-                        parentAccount["alletech_bill_areamain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_areamain");
+                        ChildParentAccount["alletech_bill_areamain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_areamain");
                     if (childAccount.Attributes.Contains("alletech_bill_specifybillingarea"))
-                        parentAccount["alletech_bill_specifybillingarea"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybillingarea");
+                        ChildParentAccount["alletech_bill_specifybillingarea"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybillingarea");
                     if (childAccount.Attributes.Contains("alletech_bill_buildingname"))
-                        parentAccount["alletech_bill_buildingname"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_buildingname");
+                        ChildParentAccount["alletech_bill_buildingname"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_buildingname");
                     if (childAccount.Attributes.Contains("alletech_bill_specifybuilding"))
-                        parentAccount["alletech_bill_specifybuilding"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybuilding");
+                        ChildParentAccount["alletech_bill_specifybuilding"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybuilding");
                     if (childAccount.Attributes.Contains("alletech_bill_buildingnoplotno"))
-                        parentAccount["alletech_bill_buildingnoplotno"] = childAccount.GetAttributeValue<String>("alletech_bill_buildingnoplotno");
+                        ChildParentAccount["alletech_bill_buildingnoplotno"] = childAccount.GetAttributeValue<String>("alletech_bill_buildingnoplotno");
                     if (childAccount.Attributes.Contains("alletech_bill_locality"))
-                        parentAccount["alletech_bill_locality"] = childAccount.GetAttributeValue<String>("alletech_bill_locality");
+                        ChildParentAccount["alletech_bill_locality"] = childAccount.GetAttributeValue<String>("alletech_bill_locality");
                     if (childAccount.Attributes.Contains("alletech_bill_buildingtype"))
-                        parentAccount["alletech_bill_buildingtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_bill_buildingtype");
+                        ChildParentAccount["alletech_bill_buildingtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_bill_buildingtype");
                     if (childAccount.Attributes.Contains("alletech_bill_floor"))
-                        parentAccount["alletech_bill_floor"] = childAccount.GetAttributeValue<String>("alletech_bill_floor");
+                        ChildParentAccount["alletech_bill_floor"] = childAccount.GetAttributeValue<String>("alletech_bill_floor");
                     if (childAccount.Attributes.Contains("alletech_bill_street"))
-                        parentAccount["alletech_bill_street"] = childAccount.GetAttributeValue<String>("alletech_bill_street");
+                        ChildParentAccount["alletech_bill_street"] = childAccount.GetAttributeValue<String>("alletech_bill_street");
                     if (childAccount.Attributes.Contains("alletech_bill_landmarkifany"))
-                        parentAccount["alletech_bill_landmarkifany"] = childAccount.GetAttributeValue<String>("alletech_bill_landmarkifany");
+                        ChildParentAccount["alletech_bill_landmarkifany"] = childAccount.GetAttributeValue<String>("alletech_bill_landmarkifany");
                     if (childAccount.Attributes.Contains("alletech_bill_billingphoneno"))
-                        parentAccount["alletech_bill_billingphoneno"] = childAccount.GetAttributeValue<String>("alletech_bill_billingphoneno");
+                        ChildParentAccount["alletech_bill_billingphoneno"] = childAccount.GetAttributeValue<String>("alletech_bill_billingphoneno");
                     #endregion
 
                     tracingService.Trace("Before Create");
 
-                    Guid parentAccountId = service.Create(parentAccount);
+                    Guid parentAccountId = service.Create(ChildParentAccount);
 
                     CreateAccountId = parentAccountId;
+
+                    NewAccountid = GetAccountNo(service, parentAccountId);
+                    //Entity SAF01 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_parentaccountonl"));
+                    //SAF01["onl_parentaccountonl"] = new EntityReference("account", parentAccountId);
+                    //service.Update(SAF01);
+
+                    //tracingService.Trace("updating reference in postimage");
+                    //SAF["onl_parentaccountonl"] = new EntityReference("account", parentAccountId);
+
 
                     // Parent Account Association at Child Account
                     Entity childAccount01 = service.Retrieve("account", childAccount.Id, new ColumnSet("parentaccountid"));
@@ -1576,7 +1477,7 @@ namespace SAFCRMUnifyIntegration
             }
 
         }
-        public String ParentAccountSitesCreation(IOrganizationService service, ref Entity SAF, Guid Oppid, IPluginExecutionContext context, int sitecount, string ushortname, string Trigger)
+        public String ChildcountSitesCreation(IOrganizationService service, ref Entity SAF, Guid Oppid, IPluginExecutionContext context, int sitecount, string ushortname, string Trigger,Entity SiteEntity)
         {
             string Account2 = string.Empty;
             if (context.Depth == 1)
@@ -1584,13 +1485,11 @@ namespace SAFCRMUnifyIntegration
                 EntityReference childAccountDomain = null;
                 Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
                 String canId = String.Empty;
+                canId = OppEntity.GetAttributeValue<String>("alletech_accountid");
 
-                //if (SAF.Attributes.Contains("onl_spectra_accountid"))
-                //    canId = SAF.GetAttributeValue<String>("onl_spectra_accountid");
 
-                string Account = GetAccountNo(service, CreateAccountId);
 
-                ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Account);
+                ConditionExpression condition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, canId);
                 FilterExpression filter = new FilterExpression();
                 filter.AddCondition(condition);
                 filter.FilterOperator = LogicalOperator.And;
@@ -1601,38 +1500,26 @@ namespace SAFCRMUnifyIntegration
                     Criteria = filter,
                 };
                 EntityCollection childAccountCollection = service.RetrieveMultiple(query);
-              
+
                 Entity childAccount = childAccountCollection.Entities[0];
 
                 if (Trigger == "CreateSiteAccount")
                 {
                     // check if Parent account, existing on Child has Unify ID
-                    if (!childAccount.Attributes.Contains("parentaccountid"))
+                    if (childAccount.Attributes.Contains("parentaccountid"))
                     {
-                        Entity parentAccount = new Entity("account");
+                        Entity ChildParentAccount = new Entity("account");
 
-                        if (childAccount.Attributes.Contains("alletech_domain"))
+                        EntityReference cityid = SiteEntity.GetAttributeValue<EntityReference>("onl_city");
+
+                        childAccountDomain = retrieveDomain(cityid.Id, service, Productsegmentid);
+                        if (childAccountDomain != null)
                         {
-                            tracingService.Trace("child account contains domain");
-                            parentAccount["alletech_domain"] = childAccount.GetAttributeValue<EntityReference>("alletech_domain");
-                            childAccountDomain = childAccount.GetAttributeValue<EntityReference>("alletech_domain");
-                            tracingService.Trace("domain : " + childAccountDomain.Name);
+                            ChildParentAccount["alletech_domain"] = childAccountDomain;
+                            tracingService.Trace("domain : " + childAccountDomain.Id);
                         }
-                        else
-                        {
-
-                            childAccountDomain = retrieveDomain(childAccount.GetAttributeValue<EntityReference>("alletech_city").Id, service);
-
-                            if (childAccountDomain != null)
-                            {
-                                parentAccount["alletech_domain"] = childAccountDomain;
-                                tracingService.Trace("domain : " + childAccountDomain.Id);
-                            }
-                            else
-                            {
-                                throw new InvalidPluginExecutionException("Domain record not found");
-                            }
-                        }
+                        //
+                        ChildParentAccount["parentaccountid"] = childAccount.GetAttributeValue<EntityReference>("parentaccountid");//new EntityReference("account", parentaid);
 
                         #region Account Information Details
 
@@ -1640,113 +1527,107 @@ namespace SAFCRMUnifyIntegration
 
 
                         if (childAccount.Attributes.Contains("alletech_salutation"))
-                            parentAccount["alletech_salutation"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_salutation");
+                            ChildParentAccount["alletech_salutation"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_salutation");
                         if (childAccount.Attributes.Contains("alletech_subbusinesssegment"))
-                            parentAccount["alletech_subbusinesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_subbusinesssegment");
+                            ChildParentAccount["alletech_subbusinesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_subbusinesssegment");
                         if (childAccount.Attributes.Contains("alletech_amountcharged"))
-                            parentAccount["alletech_amountcharged"] = childAccount.GetAttributeValue<Money>("alletech_amountcharged");
+                            ChildParentAccount["alletech_amountcharged"] = childAccount.GetAttributeValue<Money>("alletech_amountcharged");
                         if (childAccount.Attributes.Contains("alletech_businesssegment"))
-                            parentAccount["alletech_businesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_businesssegment");
+                            ChildParentAccount["alletech_businesssegment"] = childAccount.GetAttributeValue<EntityReference>("alletech_businesssegment");
                         if (childAccount.Attributes.Contains("alletech_industry"))
-                            parentAccount["alletech_industry"] = childAccount.GetAttributeValue<EntityReference>("alletech_industry");
+                            ChildParentAccount["alletech_industry"] = childAccount.GetAttributeValue<EntityReference>("alletech_industry");
                         if (childAccount.Attributes.Contains("alletech_firmtype"))
-                            parentAccount["alletech_firmtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_firmtype");
+                            ChildParentAccount["alletech_firmtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_firmtype");
                         if (childAccount.Attributes.Contains("alletech_activationdate"))
-                            parentAccount["alletech_activationdate"] = childAccount.GetAttributeValue<DateTime>("alletech_activationdate");
+                            ChildParentAccount["alletech_activationdate"] = childAccount.GetAttributeValue<DateTime>("alletech_activationdate");
                         if (childAccount.Attributes.Contains("alletech_channelpartner"))
-                            parentAccount["alletech_channelpartner"] = childAccount.GetAttributeValue<EntityReference>("alletech_channelpartner");
+                            ChildParentAccount["alletech_channelpartner"] = childAccount.GetAttributeValue<EntityReference>("alletech_channelpartner");
                         if (childAccount.Attributes.Contains("alletech_product"))
-                            parentAccount["alletech_product"] = childAccount.GetAttributeValue<EntityReference>("alletech_product");
-                        if (childAccount.Attributes.Contains(""))
-
-                            tracingService.Trace("before string attributes");
+                            ChildParentAccount["alletech_product"] = childAccount.GetAttributeValue<EntityReference>("alletech_product");
+                      
+                            tracingService.Trace("before s string attributes");
 
                         if (childAccount.Attributes.Contains("name"))
-                            parentAccount["name"] = childAccount.GetAttributeValue<String>("name");
-                        if (childAccount.Attributes.Contains("alletech_unifyshortname"))
-                            parentAccount["alletech_unifyshortname"] = childAccount.GetAttributeValue<String>("alletech_unifyshortname");
+                            ChildParentAccount["name"] = childAccount.GetAttributeValue<String>("name");
+                        //if (childAccount.Attributes.Contains("alletech_unifyshortname"))
+                        //    ChildParentAccount["alletech_unifyshortname"] = childAccount.GetAttributeValue<String>("alletech_unifyshortname");
                         if (childAccount.Attributes.Contains("alletech_accountshortname"))
-                            parentAccount["alletech_accountshortname"] = childAccount.GetAttributeValue<String>("alletech_accountshortname");
+                            ChildParentAccount["alletech_accountshortname"] = childAccount.GetAttributeValue<String>("alletech_accountshortname");
                         if (childAccount.Attributes.Contains("emailaddress1"))
-                            parentAccount["emailaddress1"] = childAccount.GetAttributeValue<String>("emailaddress1");
+                            ChildParentAccount["emailaddress1"] = childAccount.GetAttributeValue<String>("emailaddress1");
                         if (childAccount.Attributes.Contains("alletech_transactionid"))
-                            parentAccount["alletech_transactionid"] = childAccount.GetAttributeValue<String>("alletech_transactionid");
+                            ChildParentAccount["alletech_transactionid"] = childAccount.GetAttributeValue<String>("alletech_transactionid");
                         if (childAccount.Attributes.Contains("alletech_emailid"))
-                            parentAccount["alletech_emailid"] = childAccount.GetAttributeValue<String>("alletech_emailid");
+                            ChildParentAccount["alletech_emailid"] = childAccount.GetAttributeValue<String>("alletech_emailid");
                         if (childAccount.Attributes.Contains("alletech_companyname"))
-                            parentAccount["alletech_companyname"] = childAccount.GetAttributeValue<String>("alletech_companyname");
+                            ChildParentAccount["alletech_companyname"] = childAccount.GetAttributeValue<String>("alletech_companyname");
                         if (childAccount.Attributes.Contains("alletech_facebookid"))
-                            parentAccount["alletech_facebookid"] = childAccount.GetAttributeValue<String>("alletech_facebookid");
+                            ChildParentAccount["alletech_facebookid"] = childAccount.GetAttributeValue<String>("alletech_facebookid");
                         if (childAccount.Attributes.Contains("alletech_companynamehome"))
-                            parentAccount["alletech_companynamehome"] = childAccount.GetAttributeValue<String>("alletech_companynamehome");
+                            ChildParentAccount["alletech_companynamehome"] = childAccount.GetAttributeValue<String>("alletech_companynamehome");
                         if (childAccount.Attributes.Contains("alletech_twitterid"))
-                            parentAccount["alletech_twitterid"] = childAccount.GetAttributeValue<String>("alletech_twitterid");
+                            ChildParentAccount["alletech_twitterid"] = childAccount.GetAttributeValue<String>("alletech_twitterid");
                         if (childAccount.Attributes.Contains("alletech_paymentid"))
-                            parentAccount["alletech_paymentid"] = childAccount.GetAttributeValue<String>("alletech_paymentid");
+                            ChildParentAccount["alletech_paymentid"] = childAccount.GetAttributeValue<String>("alletech_paymentid");
                         if (childAccount.Attributes.Contains("alletech_mobilephone"))
-                            parentAccount["alletech_mobilephone"] = childAccount.GetAttributeValue<String>("alletech_mobilephone");
+                            ChildParentAccount["alletech_mobilephone"] = childAccount.GetAttributeValue<String>("alletech_mobilephone");
                         if (childAccount.Attributes.Contains("telephone1"))
-                            parentAccount["telephone1"] = childAccount.GetAttributeValue<String>("telephone1");
+                            ChildParentAccount["telephone1"] = childAccount.GetAttributeValue<String>("telephone1");
 
                         if (childAccount.Attributes.Contains("websiteurl"))
-                            parentAccount["websiteurl"] = childAccount.GetAttributeValue<String>("websiteurl");
-                        if (childAccount.Attributes.Contains("alletech_address"))
-                            parentAccount["alletech_address"] = childAccount.GetAttributeValue<String>("alletech_address");
+                            ChildParentAccount["websiteurl"] = childAccount.GetAttributeValue<String>("websiteurl");
+                        //if (SiteEntity.Attributes.Contains("onl_address"))
+                        //    ChildParentAccount["alletech_address"] = SiteEntity.GetAttributeValue<String>("onl_address");
 
-                        tracingService.Trace("after string attributes");
+                        tracingService.Trace("after site string attributes");
                         #endregion
+                        string firstName = string.Empty;
+                        string lastnameAccShip = string.Empty;
+                        var sitename = SiteEntity.GetAttributeValue<String>("spectra_customername");
+                        string[] ssizefullnmae = sitename.Split(null);
+                        if (ssizefullnmae.Length > 1)
+                        {
+                            firstName = ssizefullnmae[0];
+                            for (int k = 1; k < ssizefullnmae.Length; k++)
+                            {
+                                lastnameAccShip = lastnameAccShip + " " + ssizefullnmae[k];
+                            }
+                        }
+                        else
+                            firstName = ssizefullnmae[0];
 
+                        if (childAccount.Attributes.Contains("alletech_contactfirstname"))
+                            ChildParentAccount["alletech_contactfirstname"] = firstName;
+                        if (childAccount.Attributes.Contains("alletech_contactlastname"))
+                            ChildParentAccount["alletech_contactlastname"] = lastnameAccShip;
                         #region Account Address
 
-                        tracingService.Trace(" In Account Address attributes");
+                        tracingService.Trace(" In site Account Address attributes");
                         #region New Added Code
-                        if (childAccount.Attributes.Contains("primarycontactid"))
-                            parentAccount["primarycontactid"] = childAccount.GetAttributeValue<EntityReference>("primarycontactid");
-                        if (childAccount.Attributes.Contains("alletech_ship_specifyarea"))
-                            parentAccount["alletech_ship_specifyarea"] = childAccount.GetAttributeValue<string>("alletech_ship_specifyarea");
-                        if (childAccount.Attributes.Contains("alletech_ship_phonetypeno"))
-                            parentAccount["alletech_ship_phonetypeno"] = childAccount.GetAttributeValue<int>("alletech_ship_phonetypeno");
-                        if (childAccount.Attributes.Contains("alletech_ship_emailtypeno"))
-                            parentAccount["alletech_ship_emailtypeno"] = childAccount.GetAttributeValue<int>("alletech_ship_emailtypeno");
-                        if (childAccount.Attributes.Contains("alletech_buildingname"))
-                            parentAccount["alletech_buildingname"] = childAccount.GetAttributeValue<EntityReference>("alletech_buildingname");
-                        if (childAccount.Attributes.Contains("alletech_ship_specifybuilding"))
-                            parentAccount["alletech_ship_specifybuilding"] = childAccount.GetAttributeValue<string>("alletech_ship_specifybuilding");
-                        if (childAccount.Attributes.Contains("alletech_ship_contactid"))
-                            parentAccount["alletech_ship_contactid"] = childAccount.GetAttributeValue<string>("alletech_ship_contactid");
+                        //if (childAccount.Attributes.Contains("primarycontactid"))
+                        //    ChildParentAccount["primarycontactid"] = childAccount.GetAttributeValue<EntityReference>("primarycontactid");
+                      
+                        //if (SiteEntity.Attributes.Contains("onl_ol_customercontactnumber"))
+                        //    ChildParentAccount["alletech_ship_phonetypeno"] = SiteEntity.GetAttributeValue<int>("onl_ol_customercontactnumber");
+                        //if (childAccount.Attributes.Contains("alletech_ship_emailtypeno"))
+                        //    ChildParentAccount["alletech_ship_emailtypeno"] = childAccount.GetAttributeValue<int>("alletech_ship_emailtypeno");
+                      
+                        //if (childAccount.Attributes.Contains("alletech_ship_contactid"))
+                        //    ChildParentAccount["alletech_ship_contactid"] = childAccount.GetAttributeValue<string>("alletech_ship_contactid");
                         #endregion
 
-                        tracingService.Trace("after newly added code in Account address");
-                        if (childAccount.Attributes.Contains("alletech_buildingnoplotno"))
-                            parentAccount["alletech_buildingnoplotno"] = childAccount.GetAttributeValue<String>("alletech_buildingnoplotno");
-                        if (childAccount.Attributes.Contains("alletech_blocknumbertowernumber"))
-                            parentAccount["alletech_blocknumbertowernumber"] = childAccount.GetAttributeValue<String>("alletech_blocknumbertowernumber");
-                        if (childAccount.Attributes.Contains("alletech_block"))
-                            parentAccount["alletech_block"] = childAccount.GetAttributeValue<String>("alletech_block");
-                        if (childAccount.Attributes.Contains("alletech_houseflatnumber"))
-                            parentAccount["alletech_houseflatnumber"] = childAccount.GetAttributeValue<String>("alletech_houseflatnumber");
-                        if (childAccount.Attributes.Contains("alletech_locality"))
-                            parentAccount["alletech_locality"] = childAccount.GetAttributeValue<String>("alletech_locality");
-                        if (childAccount.Attributes.Contains("alletech_buildingtype"))
-                            parentAccount["alletech_buildingtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_buildingtype");
-                        if (childAccount.Attributes.Contains("alletech_floor"))
-                            parentAccount["alletech_floor"] = childAccount.GetAttributeValue<String>("alletech_floor");
-                        if (childAccount.Attributes.Contains("alletech_street"))
-                            parentAccount["alletech_street"] = childAccount.GetAttributeValue<String>("alletech_street");
-                        if (childAccount.Attributes.Contains("alletech_landmarkifany"))
-                            parentAccount["alletech_landmarkifany"] = childAccount.GetAttributeValue<String>("alletech_landmarkifany");
-                        if (childAccount.Attributes.Contains("alletech_country"))
-                            parentAccount["alletech_country"] = childAccount.GetAttributeValue<EntityReference>("alletech_country");
-                        if (childAccount.Attributes.Contains("alletech_state"))
-                            parentAccount["alletech_state"] = childAccount.GetAttributeValue<EntityReference>("alletech_state");
-                        if (childAccount.Attributes.Contains("alletech_city"))
-                            parentAccount["alletech_city"] = childAccount.GetAttributeValue<EntityReference>("alletech_city");
-                        if (childAccount.Attributes.Contains("alletech_zippostalcode"))
-                            parentAccount["alletech_zippostalcode"] = childAccount.GetAttributeValue<String>("alletech_zippostalcode");
-                        if (childAccount.Attributes.Contains("alletech_area"))
-                            parentAccount["alletech_area"] = childAccount.GetAttributeValue<EntityReference>("alletech_area");
-                        if (childAccount.Attributes.Contains("alletech_lcoarea"))
-                            parentAccount["alletech_lcoarea"] = childAccount.GetAttributeValue<String>("alletech_lcoarea");
+                        tracingService.Trace("after site newly added code in Account address");
+
+                        if (SiteEntity.Attributes.Contains("onl_address"))
+                            ChildParentAccount["alletech_street"] = SiteEntity.GetAttributeValue<String>("onl_address");
+
+                        if (SiteEntity.Attributes.Contains("alletech_state"))
+                            ChildParentAccount["alletech_state"] = SiteEntity.GetAttributeValue<EntityReference>("onl_state");
+                        if (SiteEntity.Attributes.Contains("onl_city"))
+                            ChildParentAccount["alletech_city"] = SiteEntity.GetAttributeValue<EntityReference>("onl_city");
+                        if (SiteEntity.Attributes.Contains("spectra_pincode"))
+                            ChildParentAccount["alletech_zippostalcode"] = SiteEntity.GetAttributeValue<String>("spectra_pincode");
+
                         #endregion
 
                         #region Bill Address
@@ -1754,83 +1635,68 @@ namespace SAFCRMUnifyIntegration
                         tracingService.Trace("In bill Address section");
                         #region New Added Code
                         if (childAccount.Attributes.Contains("alletech_contactname"))
-                            parentAccount["alletech_contactname"] = childAccount.GetAttributeValue<string>("alletech_contactname");
+                            ChildParentAccount["alletech_contactname"] = childAccount.GetAttributeValue<string>("alletech_contactname");
                         if (childAccount.Attributes.Contains("alletech_shippingemailid"))
-                            parentAccount["alletech_shippingemailid"] = childAccount.GetAttributeValue<string>("alletech_shippingemailid");
+                            ChildParentAccount["alletech_shippingemailid"] = childAccount.GetAttributeValue<string>("alletech_shippingemailid");
                         if (childAccount.Attributes.Contains("alletech_mobilephone2"))
-                            parentAccount["alletech_mobilephone2"] = childAccount.GetAttributeValue<string>("alletech_mobilephone2");
+                            ChildParentAccount["alletech_mobilephone2"] = childAccount.GetAttributeValue<string>("alletech_mobilephone2");
                         #endregion
 
                         if (childAccount.Attributes.Contains("alletech_bill_countrymain"))
-                            parentAccount["alletech_bill_countrymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_countrymain");
+                            ChildParentAccount["alletech_bill_countrymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_countrymain");
                         if (childAccount.Attributes.Contains("alletech_bill_statemain"))
-                            parentAccount["alletech_bill_statemain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_statemain");
+                            ChildParentAccount["alletech_bill_statemain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_statemain");
                         if (childAccount.Attributes.Contains("alletech_bill_citymain"))
-                            parentAccount["alletech_bill_citymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_citymain");
+                            ChildParentAccount["alletech_bill_citymain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_citymain");
                         if (childAccount.Attributes.Contains("alletech_bill_pincode"))
-                            parentAccount["alletech_bill_pincode"] = childAccount.GetAttributeValue<String>("alletech_bill_pincode");
+                            ChildParentAccount["alletech_bill_pincode"] = childAccount.GetAttributeValue<String>("alletech_bill_pincode");
                         if (childAccount.Attributes.Contains("alletech_bill_areamain"))
-                            parentAccount["alletech_bill_areamain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_areamain");
+                            ChildParentAccount["alletech_bill_areamain"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_areamain");
                         if (childAccount.Attributes.Contains("alletech_bill_specifybillingarea"))
-                            parentAccount["alletech_bill_specifybillingarea"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybillingarea");
+                            ChildParentAccount["alletech_bill_specifybillingarea"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybillingarea");
                         if (childAccount.Attributes.Contains("alletech_bill_buildingname"))
-                            parentAccount["alletech_bill_buildingname"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_buildingname");
+                            ChildParentAccount["alletech_bill_buildingname"] = childAccount.GetAttributeValue<EntityReference>("alletech_bill_buildingname");
                         if (childAccount.Attributes.Contains("alletech_bill_specifybuilding"))
-                            parentAccount["alletech_bill_specifybuilding"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybuilding");
+                            ChildParentAccount["alletech_bill_specifybuilding"] = childAccount.GetAttributeValue<String>("alletech_bill_specifybuilding");
                         if (childAccount.Attributes.Contains("alletech_bill_buildingnoplotno"))
-                            parentAccount["alletech_bill_buildingnoplotno"] = childAccount.GetAttributeValue<String>("alletech_bill_buildingnoplotno");
+                            ChildParentAccount["alletech_bill_buildingnoplotno"] = childAccount.GetAttributeValue<String>("alletech_bill_buildingnoplotno");
                         if (childAccount.Attributes.Contains("alletech_bill_locality"))
-                            parentAccount["alletech_bill_locality"] = childAccount.GetAttributeValue<String>("alletech_bill_locality");
+                            ChildParentAccount["alletech_bill_locality"] = childAccount.GetAttributeValue<String>("alletech_bill_locality");
                         if (childAccount.Attributes.Contains("alletech_bill_buildingtype"))
-                            parentAccount["alletech_bill_buildingtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_bill_buildingtype");
+                            ChildParentAccount["alletech_bill_buildingtype"] = childAccount.GetAttributeValue<OptionSetValue>("alletech_bill_buildingtype");
                         if (childAccount.Attributes.Contains("alletech_bill_floor"))
-                            parentAccount["alletech_bill_floor"] = childAccount.GetAttributeValue<String>("alletech_bill_floor");
+                            ChildParentAccount["alletech_bill_floor"] = childAccount.GetAttributeValue<String>("alletech_bill_floor");
                         if (childAccount.Attributes.Contains("alletech_bill_street"))
-                            parentAccount["alletech_bill_street"] = childAccount.GetAttributeValue<String>("alletech_bill_street");
+                            ChildParentAccount["alletech_bill_street"] = childAccount.GetAttributeValue<String>("alletech_bill_street");
                         if (childAccount.Attributes.Contains("alletech_bill_landmarkifany"))
-                            parentAccount["alletech_bill_landmarkifany"] = childAccount.GetAttributeValue<String>("alletech_bill_landmarkifany");
+                            ChildParentAccount["alletech_bill_landmarkifany"] = childAccount.GetAttributeValue<String>("alletech_bill_landmarkifany");
                         if (childAccount.Attributes.Contains("alletech_bill_billingphoneno"))
-                            parentAccount["alletech_bill_billingphoneno"] = childAccount.GetAttributeValue<String>("alletech_bill_billingphoneno");
+                            ChildParentAccount["alletech_bill_billingphoneno"] = childAccount.GetAttributeValue<String>("alletech_bill_billingphoneno");
                         #endregion
 
-                        tracingService.Trace("Before Create");
+                        tracingService.Trace("Before account Create");
 
-                        Guid parentAccountId = service.Create(parentAccount);
+                        Guid ChildParentAccountId = service.Create(ChildParentAccount);
 
 
-                        NewAccountid = parentAccountId;
-                        Account2 = GetAccountNo(service, parentAccountId);
+
+                        Account2 = GetAccountNo(service, ChildParentAccountId);
 
                         // Parent Account Association at Child Account
                         #region Parent Account update Shortname
 
-                        //ConditionExpression ParentAccondition = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, Account2);
-                        //FilterExpression Parentfilter = new FilterExpression();
-                        //Parentfilter.AddCondition(ParentAccondition);
-                        //Parentfilter.FilterOperator = LogicalOperator.And;
-                        //QueryExpression query_parent = new QueryExpression
-                        //{
-                        //    EntityName = "account",
-                        //    ColumnSet = new ColumnSet("parentaccountid", "alletech_unifyshortname"),
-                        //    Criteria = filter,
-                        //};
-                        //EntityCollection childPCollection = service.RetrieveMultiple(query_parent);
-
-                        //Entity PAccount = childPCollection.Entities[0];
-                        //Guid parentid = childAccount.GetAttributeValue<EntityReference>("parentaccountid").Id;
-                        //if (childAccountDomain != null)
-                        //    childAccount01.Attributes["alletech_domain"] = childAccountDomain;
+                       
                         Entity childAccount01 = service.Retrieve("account", childAccount.Id, new ColumnSet("parentaccountid", "alletech_unifyshortname"));
 
-                        childAccount01["parentaccountid"] = new EntityReference("account", parentAccountId);
+                        //childAccount01["parentaccountid"] = new EntityReference("account", parentaid);
+
                         string paccshort = ushortname.Split('-')[0];
                         childAccount01["alletech_unifyshortname"] = paccshort + "-0" + sitecount;
+
                         service.Update(childAccount01);
+
+
                         #endregion
-                       
-
-                        
-
                     }
                 }
 
@@ -1845,241 +1711,200 @@ namespace SAFCRMUnifyIntegration
             {
                 //if (context.Depth == 1)
                 //{
-                    Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
+                Entity OppEntity = service.Retrieve("opportunity", Oppid, new ColumnSet("alletech_accountid"));
 
-                    var accountid = OppEntity.GetAttributeValue<String>("alletech_accountid");
+                var accountid = OppEntity.GetAttributeValue<String>("alletech_accountid");
 
-                    //Entity childAccount = GetResultByAttribute(service, "account", "alletech_accountid", accountid, "accountid");
+                QueryExpression queryConfig = new QueryExpression("account");
+                queryConfig.ColumnSet = new ColumnSet(true);
+                queryConfig.Criteria.AddCondition("alletech_accountid", ConditionOperator.Equal, accountid);
+                EntityCollection RevenuegroupCollection = service.RetrieveMultiple(queryConfig);
 
-                    QueryExpression queryConfig = new QueryExpression("account");
-                    queryConfig.ColumnSet = new ColumnSet(true);
-                    queryConfig.Criteria.AddCondition("alletech_accountid", ConditionOperator.Equal, accountid);
-                    EntityCollection RevenuegroupCollection = service.RetrieveMultiple(queryConfig);
-                    if (RevenuegroupCollection.Entities.Count > 0)
-                    {
-                        Entity childAccount = RevenuegroupCollection.Entities[0];
+                if (RevenuegroupCollection.Entities.Count > 0)
+                {
+                    Entity childAccount = RevenuegroupCollection.Entities[0];
 
-                        Entity SAF = service.Retrieve("onl_saf", SAFID.Id, new ColumnSet(true));
+                    Entity SAF = service.Retrieve("onl_saf", SAFID.Id, new ColumnSet(true));
 
-                        #region To Bill Details
-                        if (SAF.Attributes.Contains("onl_contactpersonname2"))
-                        {            //Billing information being sent to Child Account
-                            childAccount["alletech_contactname"] = SAF.GetAttributeValue<String>("onl_contactpersonname2");
-                            tracingService.Trace("alletech_contactfirstname : " + SAF.GetAttributeValue<String>("onl_contactpersonname2"));
-                        }
-
-                        if (SAF.Attributes.Contains("onl_emailid"))
-                        {
-                            childAccount["alletech_shippingemailid"] = SAF.GetAttributeValue<String>("onl_emailid");
-                            tracingService.Trace("alletech_billingemailid : " + SAF.GetAttributeValue<String>("onl_emailid"));
-                        }
-
-                        if (SAF.Attributes.Contains("onl_phonenumberonl"))
-                        {
-                            childAccount["alletech_mobilephone2"] = SAF.GetAttributeValue<String>("onl_phonenumberonl");
-                            tracingService.Trace("alletech_billingphoneno : " + SAF.GetAttributeValue<String>("onl_phonenumberonl"));
-                        }
-                        if (SAF.Attributes.Contains("onl_pincode"))
-                        {
-                            childAccount["alletech_bill_pincode"] = SAF.GetAttributeValue<String>("onl_pincode");
-                            tracingService.Trace("alletech_pincodebill : " + SAF.GetAttributeValue<String>("onl_pincode"));
-                        }
-                        if (SAF.Attributes.Contains("onl_specifyareaonl"))
-                        {
-                            childAccount["alletech_bill_specifybillingarea"] = SAF.GetAttributeValue<String>("onl_specifyareaonl");
-                            tracingService.Trace("onl_specifyareaonl : " + SAF.GetAttributeValue<String>("onl_specifyareaonl"));
-                        }
-                        if (SAF.Attributes.Contains("onl_specifybuildingonl"))
-                        {
-                            childAccount["alletech_bill_specifybuilding"] = SAF.GetAttributeValue<String>("onl_specifybuildingonl");
-                            tracingService.Trace("alletech_specifybillingbuilding : " + SAF.GetAttributeValue<String>("onl_specifybuildingonl"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_block"))
-                        {
-                            childAccount["alletech_bill_buildingnoplotno"] = SAF.GetAttributeValue<String>("onl_spectra_block");
-                            tracingService.Trace("alletech_blocktowernumberbill : " + SAF.GetAttributeValue<String>("onl_spectra_block"));
-                        }
-                        if (SAF.Attributes.Contains("onl_localityonl"))
-                        {
-                            childAccount["alletech_bill_locality"] = SAF.GetAttributeValue<String>("onl_localityonl");
-                            tracingService.Trace("alletech_localitybill : " + SAF.GetAttributeValue<String>("onl_localityonl"));
-                        }
-                        if (SAF.Attributes.Contains("onl_floor"))
-                        {
-                            childAccount["alletech_bill_floor"] = SAF.GetAttributeValue<String>("onl_floor");
-                            tracingService.Trace("alletech_floorbill : " + SAF.GetAttributeValue<String>("onl_floor"));
-                        }
-                        if (SAF.Attributes.Contains("onl_street"))
-                        {
-                            childAccount["alletech_bill_street"] = SAF.GetAttributeValue<String>("onl_street");
-                            tracingService.Trace("alletech_streetbill : " + SAF.GetAttributeValue<String>("onl_street"));
-                        }
-                        if (SAF.Attributes.Contains("onl_landmarkifany"))
-                        {
-                            childAccount["alletech_bill_landmarkifany"] = SAF.GetAttributeValue<String>("onl_landmarkifany");
-                            tracingService.Trace("alletech_landmarkbill : " + SAF.GetAttributeValue<String>("onl_landmarkifany"));
-                        }
-                        if (SAF.Attributes.Contains("onl_phonenumberonl"))
-                        {
-                            childAccount["alletech_bill_billingphoneno"] = SAF.GetAttributeValue<String>("onl_phonenumberonl");
-                            tracingService.Trace("alletech_billingphoneno : " + SAF.GetAttributeValue<String>("onl_phonenumberonl"));
-                        }
-
-                        if (SAF.Attributes.Contains("onl_buildingtype"))
-                        {
-                            childAccount["alletech_bill_buildingtype"] = SAF.GetAttributeValue<OptionSetValue>("onl_buildingtype");
-                            tracingService.Trace("alletech_buildingtypebill : " + SAF.FormattedValues["onl_buildingtype"].ToString());
-                        }
-                        if (SAF.Attributes.Contains("onl_areaonl"))
-                        {
-                            childAccount["alletech_bill_areamain"] = SAF.GetAttributeValue<EntityReference>("onl_areaonl");
-                            tracingService.Trace("alletech_area1 : " + SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name);
-                            tracingService.Trace("alletech_area1 ID : " + SAF.GetAttributeValue<EntityReference>("onl_areaonl").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_cityonl"))
-                        {
-                            childAccount["alletech_bill_citymain"] = SAF.GetAttributeValue<EntityReference>("onl_cityonl");
-                            tracingService.Trace("alletech_citybill : " + SAF.GetAttributeValue<EntityReference>("onl_cityonl").Name);
-                            tracingService.Trace("alletech_citybill ID : " + SAF.GetAttributeValue<EntityReference>("onl_cityonl").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_countryonl"))
-                        {
-                            childAccount["alletech_bill_countrymain"] = SAF.GetAttributeValue<EntityReference>("onl_countryonl");
-                            tracingService.Trace("alletech_countrybill : " + SAF.GetAttributeValue<EntityReference>("onl_countryonl").Name);
-                            tracingService.Trace("alletech_countrybill ID : " + SAF.GetAttributeValue<EntityReference>("onl_countryonl").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_stateonl"))
-                        {
-                            childAccount["alletech_bill_statemain"] = SAF.GetAttributeValue<EntityReference>("onl_stateonl");
-                            tracingService.Trace("alletech_statebill" + SAF.GetAttributeValue<EntityReference>("onl_stateonl").Name);
-                            tracingService.Trace("alletech_statebill ID" + SAF.GetAttributeValue<EntityReference>("onl_stateonl").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_buildingnameonl"))
-                        {
-                            childAccount["alletech_bill_buildingname"] = SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl");
-                            tracingService.Trace("alletech_buildingnamebill : " + SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name);
-                            tracingService.Trace("alletech_buildingnamebill ID : " + SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Id);
-                        }
-
-                        #endregion
-
-                        if (SAF.Contains("onl_panno"))
-                        {
-                            childAccount["pcl_panno"] = SAF.GetAttributeValue<string>("onl_panno");
-                        }
-                        if (SAF.Contains("onl_tanno") && SAF["onl_tanno"] != null)
-                        {
-                            childAccount["pcl_tanno"] = SAF.GetAttributeValue<string>("onl_tanno");
-                        }
-
-                        Entity OppEntityall = service.Retrieve("opportunity", Oppid, new ColumnSet(true));
-                        if (SAF.Contains("onl_productonl"))
-                            childAccount["alletech_product"] = SAF.GetAttributeValue<EntityReference>("onl_productonl");
-                        if (SAF.Contains("onl_websiteurl"))
-                            childAccount["websiteurl"] = OppEntityall.GetAttributeValue<String>("onl_websiteurl");
-                        if (SAF.Contains("onl_industrytypeonl"))
-                            childAccount["alletech_industry"] = OppEntityall.GetAttributeValue<String>("onl_industrytypeonl");
-                        if (SAF.Contains("onl_firmtypeonl"))
-                            childAccount["alletech_firmtype"] = OppEntityall.GetAttributeValue<String>("onl_firmtypeonl");
-
-
-
-                        //if (PRDSeg != "MAC")
-                        //{
-                        //    tracingService.Trace("Checking ship to details");
-
-                        #region To Ship Details
-
-                        if (SAF.Attributes.Contains("onl_spectra_buildingtype"))
-                        {
-                            childAccount["alletech_buildingtype"] = SAF.GetAttributeValue<OptionSetValue>("onl_spectra_buildingtype");
-                            tracingService.Trace("alletech_buildingtype  : " + SAF.FormattedValues["onl_spectra_buildingtype"].ToString());
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_specifybuilding"))
-                        {
-                            childAccount["alletech_ship_specifybuilding"] = SAF.GetAttributeValue<String>("onl_spectra_specifybuilding");
-                            tracingService.Trace("alletech_specifybuilding : " + SAF.GetAttributeValue<String>("onl_spectra_specifybuilding"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_specifyarea"))
-                        {
-                            childAccount["alletech_ship_specifyarea"] = SAF.GetAttributeValue<String>("onl_spectra_specifyarea");
-                            tracingService.Trace("alletech_specifyarea : " + SAF.GetAttributeValue<String>("onl_spectra_specifyarea"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_pincode"))
-                        {
-                            childAccount["alletech_zippostalcode"] = SAF.GetAttributeValue<String>("onl_spectra_pincode");
-                            tracingService.Trace("alletech_zippostalcode : " + SAF.GetAttributeValue<String>("onl_spectra_pincode"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_buildingnoplotno"))
-                        {
-                            childAccount["alletech_buildingnoplotno"] = SAF.GetAttributeValue<String>("onl_spectra_buildingnoplotno");
-                            tracingService.Trace("alletech_buildingnoplotno : " + SAF.GetAttributeValue<String>("onl_spectra_buildingnoplotno"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_floor"))
-                        {
-                            childAccount["alletech_floor"] = SAF.GetAttributeValue<String>("onl_spectra_floor");
-                            tracingService.Trace("alletech_floor : " + SAF.GetAttributeValue<String>("onl_spectra_floor"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_landmark"))
-                        {
-                            childAccount["alletech_landmarkifany"] = SAF.GetAttributeValue<String>("onl_spectra_landmark");
-                            tracingService.Trace("alletech_landmarkifany : " + SAF.GetAttributeValue<String>("onl_spectra_landmark"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_street"))
-                        {
-                            childAccount["alletech_street"] = SAF.GetAttributeValue<String>("onl_spectra_street");
-                            tracingService.Trace("alletech_street : " + SAF.GetAttributeValue<String>("onl_spectra_street"));
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_locality"))
-                        {
-                            childAccount["alletech_locality"] = SAF.GetAttributeValue<String>("onl_spectra_locality");
-                            tracingService.Trace("alletech_locality : " + SAF.GetAttributeValue<String>("onl_spectra_locality"));
-                        }
-
-                        if (SAF.Attributes.Contains("onl_spectra_buildingname"))
-                        {
-                            childAccount["alletech_buildingname"] = SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname");
-                            tracingService.Trace("alletech_buildingname : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Name);
-                            tracingService.Trace("alletech_buildingname ID : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_buildingname").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_country"))
-                        {
-                            childAccount["alletech_country"] = SAF.GetAttributeValue<EntityReference>("onl_spectra_country");
-                            tracingService.Trace("alletech_ftthcountry : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_country").Name);
-                            tracingService.Trace("alletech_ftthcountry ID: " + SAF.GetAttributeValue<EntityReference>("onl_spectra_country").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_state"))
-                        {
-                            childAccount["alletech_state"] = SAF.GetAttributeValue<EntityReference>("onl_spectra_state");
-                            tracingService.Trace("alletech_ftthstate : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_state").Name);
-                            tracingService.Trace("alletech_ftthstate ID : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_state").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_city"))
-                        {
-                            childAccount["alletech_city"] = SAF.GetAttributeValue<EntityReference>("onl_spectra_city");
-                            tracingService.Trace("alletech_ftthcity : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_city").Name);
-                            tracingService.Trace("alletech_ftthcity ID : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_city").Id);
-                        }
-                        if (SAF.Attributes.Contains("onl_spectra_area"))
-                        {
-                            childAccount["alletech_area"] = SAF.GetAttributeValue<EntityReference>("onl_spectra_area");
-                            tracingService.Trace("alletech_area : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Name);
-                            tracingService.Trace("alletech_area ID : " + SAF.GetAttributeValue<EntityReference>("onl_spectra_area").Id);
-                        }
-
-                        #endregion
-
-                        tracingService.Trace("before updating");
-                        //}
-
-                        service.Update(childAccount);
-
-                        tracingService.Trace("Child account update completed");
+                    #region To Bill Details
+                    if (SAF.Attributes.Contains("onl_contactpersonname2"))
+                    {            //Billing information being sent to Child Account
+                        childAccount["alletech_contactname"] = SAF.GetAttributeValue<String>("onl_contactpersonname2");
+                        tracingService.Trace("alletech_contactfirstname : " + SAF.GetAttributeValue<String>("onl_contactpersonname2"));
                     }
-                    else
+
+                    if (SAF.Attributes.Contains("onl_emailid"))
                     {
-                        throw new InvalidPluginExecutionException("Account Record Not Updated");
+                        childAccount["alletech_shippingemailid"] = SAF.GetAttributeValue<String>("onl_emailid");
+                        tracingService.Trace("alletech_billingemailid : " + SAF.GetAttributeValue<String>("onl_emailid"));
                     }
+
+                    if (SAF.Attributes.Contains("onl_phonenumberonl"))
+                    {
+                        childAccount["alletech_mobilephone2"] = SAF.GetAttributeValue<String>("onl_phonenumberonl");
+                        tracingService.Trace("alletech_billingphoneno : " + SAF.GetAttributeValue<String>("onl_phonenumberonl"));
+                    }
+                    if (SAF.Attributes.Contains("onl_pincode"))
+                    {
+                        childAccount["alletech_bill_pincode"] = SAF.GetAttributeValue<String>("onl_pincode");
+                        tracingService.Trace("alletech_pincodebill : " + SAF.GetAttributeValue<String>("onl_pincode"));
+                    }
+                    if (SAF.Attributes.Contains("onl_specifyareaonl"))
+                    {
+                        childAccount["alletech_bill_specifybillingarea"] = SAF.GetAttributeValue<String>("onl_specifyareaonl");
+                        tracingService.Trace("onl_specifyareaonl : " + SAF.GetAttributeValue<String>("onl_specifyareaonl"));
+                    }
+                    if (SAF.Attributes.Contains("onl_specifybuildingonl"))
+                    {
+                        childAccount["alletech_bill_specifybuilding"] = SAF.GetAttributeValue<String>("onl_specifybuildingonl");
+                        tracingService.Trace("alletech_specifybillingbuilding : " + SAF.GetAttributeValue<String>("onl_specifybuildingonl"));
+                    }
+                    if (SAF.Attributes.Contains("onl_spectra_block"))
+                    {
+                        childAccount["alletech_bill_buildingnoplotno"] = SAF.GetAttributeValue<String>("onl_spectra_block");
+                        tracingService.Trace("alletech_blocktowernumberbill : " + SAF.GetAttributeValue<String>("onl_spectra_block"));
+                    }
+                    if (SAF.Attributes.Contains("onl_localityonl"))
+                    {
+                        childAccount["alletech_bill_locality"] = SAF.GetAttributeValue<String>("onl_localityonl");
+                        tracingService.Trace("alletech_localitybill : " + SAF.GetAttributeValue<String>("onl_localityonl"));
+                    }
+                    if (SAF.Attributes.Contains("onl_floor"))
+                    {
+                        childAccount["alletech_bill_floor"] = SAF.GetAttributeValue<String>("onl_floor");
+                        tracingService.Trace("alletech_floorbill : " + SAF.GetAttributeValue<String>("onl_floor"));
+                    }
+                    if (SAF.Attributes.Contains("onl_street"))
+                    {
+                        childAccount["alletech_bill_street"] = SAF.GetAttributeValue<String>("onl_street");
+                        tracingService.Trace("alletech_streetbill : " + SAF.GetAttributeValue<String>("onl_street"));
+                    }
+                    if (SAF.Attributes.Contains("onl_landmarkifany"))
+                    {
+                        childAccount["alletech_bill_landmarkifany"] = SAF.GetAttributeValue<String>("onl_landmarkifany");
+                        tracingService.Trace("alletech_landmarkbill : " + SAF.GetAttributeValue<String>("onl_landmarkifany"));
+                    }
+                    if (SAF.Attributes.Contains("onl_phonenumberonl"))
+                    {
+                        childAccount["alletech_bill_billingphoneno"] = SAF.GetAttributeValue<String>("onl_phonenumberonl");
+                        tracingService.Trace("alletech_billingphoneno : " + SAF.GetAttributeValue<String>("onl_phonenumberonl"));
+                    }
+
+                    if (SAF.Attributes.Contains("onl_buildingtype"))
+                    {
+                        childAccount["alletech_bill_buildingtype"] = SAF.GetAttributeValue<OptionSetValue>("onl_buildingtype");
+                        tracingService.Trace("alletech_buildingtypebill : " + SAF.FormattedValues["onl_buildingtype"].ToString());
+                    }
+                    if (SAF.Attributes.Contains("onl_areaonl"))
+                    {
+                        childAccount["alletech_bill_areamain"] = SAF.GetAttributeValue<EntityReference>("onl_areaonl");
+                        tracingService.Trace("alletech_area1 : " + SAF.GetAttributeValue<EntityReference>("onl_areaonl").Name);
+                        tracingService.Trace("alletech_area1 ID : " + SAF.GetAttributeValue<EntityReference>("onl_areaonl").Id);
+                    }
+                    if (SAF.Attributes.Contains("onl_cityonl"))
+                    {
+                        childAccount["alletech_bill_citymain"] = SAF.GetAttributeValue<EntityReference>("onl_cityonl");
+                        tracingService.Trace("alletech_citybill : " + SAF.GetAttributeValue<EntityReference>("onl_cityonl").Name);
+                        tracingService.Trace("alletech_citybill ID : " + SAF.GetAttributeValue<EntityReference>("onl_cityonl").Id);
+                    }
+                    if (SAF.Attributes.Contains("onl_countryonl"))
+                    {
+                        childAccount["alletech_bill_countrymain"] = SAF.GetAttributeValue<EntityReference>("onl_countryonl");
+                        tracingService.Trace("alletech_countrybill : " + SAF.GetAttributeValue<EntityReference>("onl_countryonl").Name);
+                        tracingService.Trace("alletech_countrybill ID : " + SAF.GetAttributeValue<EntityReference>("onl_countryonl").Id);
+                    }
+                    if (SAF.Attributes.Contains("onl_stateonl"))
+                    {
+                        childAccount["alletech_bill_statemain"] = SAF.GetAttributeValue<EntityReference>("onl_stateonl");
+                        tracingService.Trace("alletech_statebill" + SAF.GetAttributeValue<EntityReference>("onl_stateonl").Name);
+                        tracingService.Trace("alletech_statebill ID" + SAF.GetAttributeValue<EntityReference>("onl_stateonl").Id);
+                    }
+                    if (SAF.Attributes.Contains("onl_buildingnameonl"))
+                    {
+                        childAccount["alletech_bill_buildingname"] = SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl");
+                        tracingService.Trace("alletech_buildingnamebill : " + SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Name);
+                        tracingService.Trace("alletech_buildingnamebill ID : " + SAF.GetAttributeValue<EntityReference>("onl_buildingnameonl").Id);
+                    }
+
+                    #endregion
+
+                    if (SAF.Contains("onl_panno"))
+                    {
+                        childAccount["pcl_panno"] = SAF.GetAttributeValue<string>("onl_panno");
+                    }
+                    if (SAF.Contains("onl_tanno") && SAF["onl_tanno"] != null)
+                    {
+                        childAccount["pcl_tanno"] = SAF.GetAttributeValue<string>("onl_tanno");
+                    }
+
+                    Entity OppEntityall = service.Retrieve("opportunity", Oppid, new ColumnSet(true));
+                    if (SAF.Contains("onl_productonl"))
+                        childAccount["alletech_product"] = SAF.GetAttributeValue<EntityReference>("onl_productonl");
+                    if (SAF.Contains("onl_websiteurl"))
+                        childAccount["websiteurl"] = OppEntityall.GetAttributeValue<String>("onl_websiteurl");
+                    if (SAF.Contains("onl_industrytypeonl"))
+                        childAccount["alletech_industry"] = OppEntityall.GetAttributeValue<String>("onl_industrytypeonl");
+                    if (SAF.Contains("onl_firmtypeonl"))
+                        childAccount["alletech_firmtype"] = OppEntityall.GetAttributeValue<String>("onl_firmtypeonl");
+
+                    #region To Ship Details
+                    QueryExpression querycustomersite = new QueryExpression();
+                    querycustomersite.EntityName = "onl_customersite";
+                    querycustomersite.ColumnSet = new ColumnSet(true);
+                    querycustomersite.Criteria.AddCondition("onl_opportunityidid", ConditionOperator.Equal, Oppid);
+                    querycustomersite.Criteria.AddCondition("onl_sitetype", ConditionOperator.Equal, "122050000");//Hub Condition
+                    EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
+
+                    int rownumber = 1;
+                    foreach (Entity entity in resultcustomersite.Entities)
+                    {
+                        if(rownumber==1)
+                        {
+                            
+                            if (entity.Attributes.Contains("spectra_pincode"))
+                            {
+                                childAccount["alletech_zippostalcode"] = entity.GetAttributeValue<String>("spectra_pincode");
+                                tracingService.Trace("alletech_zippostalcode : " + entity.GetAttributeValue<String>("spectra_pincode"));
+                            }
+                            if (entity.Attributes.Contains("onl_address"))
+                            {
+                                childAccount["alletech_street"] = entity.GetAttributeValue<String>("onl_address");
+                                tracingService.Trace("alletech_street : " + SAF.GetAttributeValue<String>("onl_address"));
+                            }
+                            if (entity.Attributes.Contains("onl_state"))
+                            {
+                                childAccount["alletech_state"] = entity.GetAttributeValue<EntityReference>("onl_state");
+                                tracingService.Trace("alletech_ftthstate : " + entity.GetAttributeValue<EntityReference>("onl_state").Name);
+                                tracingService.Trace("alletech_ftthstate ID : " + entity.GetAttributeValue<EntityReference>("onl_state").Id);
+                            }
+
+                            if (entity.Attributes.Contains("onl_city"))
+                            {
+                                childAccount["alletech_city"] = entity.GetAttributeValue<EntityReference>("onl_city");
+                                tracingService.Trace("alletech_ftthcity : " + entity.GetAttributeValue<EntityReference>("onl_city").Name);
+                                tracingService.Trace("alletech_ftthcity ID : " + entity.GetAttributeValue<EntityReference>("onl_city").Id);
+                            }
+
+                        }
+                    }
+                       
+
+                      
+                   
+
+                    #endregion
+
+                    tracingService.Trace("before updating");
+                  
+
+                    service.Update(childAccount);
+
+                    tracingService.Trace("Child account update completed");
+                }
+                else
+                {
+                    throw new InvalidPluginExecutionException("Account Record Not Updated");
+                }
                 //}
             }
             catch (Exception e)
@@ -2127,16 +1952,16 @@ namespace SAFCRMUnifyIntegration
                     EntityCollection parentaccountcollection = service.RetrieveMultiple(query);
                     if (parentaccountcollection.Entities.Count == 0)
                         return;
-                    Entity parentaccount = parentaccountcollection.Entities[0];
+                    Entity ChildParentAccount = parentaccountcollection.Entities[0];
 
                     #region if parent account contains short name
-                    if (parentaccount.Contains("alletech_unifyshortname"))
+                    if (ChildParentAccount.Contains("alletech_unifyshortname"))
                     {
-                        string paraccshrt = parentaccount.GetAttributeValue<String>("alletech_unifyshortname");
+                        string paraccshrt = ChildParentAccount.GetAttributeValue<String>("alletech_unifyshortname");
                         // string pashrt = paraccshrt.Substring(0, 4);
                         string pashrt = paraccshrt.ToString();
 
-                        ConditionExpression condition4 = new ConditionExpression("parentaccountid", ConditionOperator.Equal, parentaccount.Id);
+                        ConditionExpression condition4 = new ConditionExpression("parentaccountid", ConditionOperator.Equal, ChildParentAccount.Id);
                         //ConditionExpression condition5 = new ConditionExpression("alletech_unifyshortname", ConditionOperator.BeginsWith, pashrt);
                         FilterExpression filter4 = new FilterExpression();
                         filter4.FilterOperator = LogicalOperator.And;
@@ -2222,8 +2047,8 @@ namespace SAFCRMUnifyIntegration
                         counterstr = counterstr + counter.ToString();
 
                         service.Update(accconfig.Entities[0]);
-                        parentaccount.Attributes["alletech_unifyshortname"] = counterstr;
-                        service.Update(parentaccount);
+                        ChildParentAccount.Attributes["alletech_unifyshortname"] = counterstr;
+                        service.Update(ChildParentAccount);
 
                         //ConditionExpression condition02 = new ConditionExpression("alletech_accountid", ConditionOperator.Equal, canId);
                         //FilterExpression filter02 = new FilterExpression();
@@ -2341,10 +2166,10 @@ namespace SAFCRMUnifyIntegration
                         EntityCollection ParentAccountCollection = service.RetrieveMultiple(queryParent);
                         if (ParentAccountCollection.Entities.Count == 0)
                             return;
-                        Entity ParentAccount = ParentAccountCollection.Entities[0];
-                        ParentAccount.Attributes["alletech_unifyshortname"] = prefix + finalcount;
+                        Entity ChildParentAccount = ParentAccountCollection.Entities[0];
+                        ChildParentAccount.Attributes["alletech_unifyshortname"] = prefix + finalcount;
 
-                        service.Update(ParentAccount);
+                        service.Update(ChildParentAccount);
                         #endregion
 
                         #region Existing Account Update Shortname with -01
@@ -2412,7 +2237,7 @@ namespace SAFCRMUnifyIntegration
             }
             return valueString;
         }
-        public EntityReference retrieveDomain(Guid city, IOrganizationService service)
+        public EntityReference retrieveDomain(Guid city, IOrganizationService service, Guid Productsegmentid)
         {
             EntityReference childAccountDomain = null;
             try
@@ -2420,10 +2245,6 @@ namespace SAFCRMUnifyIntegration
                 QueryExpression queryConfig = new QueryExpression("alletech_domain");
                 queryConfig.ColumnSet = new ColumnSet("alletech_domainid");
                 queryConfig.Criteria.AddCondition("pcl_city", ConditionOperator.Equal, city);
-
-                //if (PRDSeg == "BBB")
-                //    queryConfig.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
-                //else
                 queryConfig.Criteria.AddCondition("spectra_productsegment", ConditionOperator.Equal, Productsegmentid);
 
                 EntityCollection domainCollection = service.RetrieveMultiple(queryConfig);

@@ -44,18 +44,25 @@ namespace SAFCRMUnifyIntegration
                 if (workorder.LogicalName != "onl_workorders")
                     return;
                 Entity workorders = context.PostEntityImages["PostImage"];
-                if (workorders.GetAttributeValue<OptionSetValue>("onl_spectra_orderstatus").Value == 122050005) //when status is Provisioning Completed
-                {
-                    if (workorders.Attributes.Contains("spectra_contractresponse"))
+              //  if (workorders.GetAttributeValue<OptionSetValue>("onl_spectra_orderstatus").Value == 122050005) //when status is Provisioning Completed
+              //  {
+                    EntityReference refsite = workorders.GetAttributeValue<EntityReference>("onl_sitenameid");
+                    Entity Sites = service.Retrieve("onl_customersite", refsite.Id, new ColumnSet("spectra_contractresponse"));
+                    string cresponse = Sites.GetAttributeValue<string>("spectra_contractresponse");
+                    if (cresponse=="Done")
                     {
-                        if (workorders.GetAttributeValue<string>("spectra_contractresponse") == "Done")
-                            return;
+                        EntityReference refsafid = workorders.GetAttributeValue<EntityReference>("spectra_safid");
+                        Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
+                        EntityReference ownerLookup = (EntityReference)SAF.Attributes["onl_opportunityidid"];
+
+                        var opportunityName = ownerLookup.Name;
+                        Guid opportunityid = ownerLookup.Id;
+                        Entity Parent_accountid = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_accountid"));
+                        CanNo = Parent_accountid.GetAttributeValue<String>("alletech_accountid");
+                        // CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
+                        CreateAccountContractRequest(service, SAF, CanNo, context, workorders);
                     }
-                    EntityReference refsafid = workorders.GetAttributeValue<EntityReference>("spectra_safid");
-                    Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
-                    CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
-                    CreateAccountContractRequest(service, SAF, CanNo, context, workorders);
-                }
+               // }
 
             }
         }
@@ -69,10 +76,10 @@ namespace SAFCRMUnifyIntegration
             int billcycleno = 0;
             DateTime billStartDate = new DateTime();
             string billstartDateString = null;
-            Boolean advance = true;
+            
             Int32 billingFrequency = 0;
             String productId = String.Empty;
-            DateTime subscriptionStartDate = new DateTime();
+           
             int billProfileNo = 1, invoiceTemplateNo = 5, domSegment = 0;
             decimal RC = 0;
             decimal NRC = 0;
@@ -83,7 +90,8 @@ namespace SAFCRMUnifyIntegration
             //string seg = null;
             EntityReference seg = null;
             #endregion
-
+            DateTime customerAcceptdate = workorder.GetAttributeValue<DateTime>("spectra_acceptedbycustomerdate");
+            int days = customerAcceptdate.Day;
             #region Account values
             QueryExpression query = new QueryExpression("account");
             query.NoLock = true;
@@ -192,8 +200,8 @@ namespace SAFCRMUnifyIntegration
                 if (seg.Name == "SDWAN")
                 {
                     // 
-                    firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, Convert.ToInt32(billCycleEnt.GetAttributeValue<String>("alletech_days")));
-                    billInvoiceEndDate = new DateTime(billStartDate2.Year, billStartDate2.Month, 3 + 1);
+                    firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, billCycleEnt.GetAttributeValue<int>("alletech_billcycleday"));
+                   // billInvoiceEndDate = new DateTime(billStartDate2.Year, billStartDate2.Month, 3 + 1);
                     firstInvoiceDateString = DateFormater(firstInvoiceDate);
 
                     Entity prodseg = service.Retrieve("alletech_productsegment", seg.Id, new ColumnSet("spectra_invoicetemplate", "spectra_billprofile", "spectra_dunningprofile"));
@@ -481,11 +489,13 @@ namespace SAFCRMUnifyIntegration
                     #endregion
                     if (cflag == true)
                     {
-                        Entity _wko = service.Retrieve("onl_workorders", workorder.Id, new ColumnSet("spectra_contractresponse"));
-                        _wko["spectra_contractresponse"] = "Done";
-                        service.Update(_wko);
+                        EntityReference refsite = workorder.GetAttributeValue<EntityReference>("onl_sitenameid");
+                        //spectra_contractresponse
+                        Entity Sites = service.Retrieve("onl_customersite", refsite.Id, new ColumnSet("spectra_contractresponse"));
+                        Sites["spectra_contractresponse"] = "Done";
+                        service.Update(Sites);
                     }
-                   
+
                 }
             }
 
