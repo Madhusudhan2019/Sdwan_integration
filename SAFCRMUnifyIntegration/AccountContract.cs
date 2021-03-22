@@ -10,14 +10,14 @@ using System.Xml;
 
 namespace SAFCRMUnifyIntegration
 {
-    public class createAccountContract : IPlugin
+    public class AccountContract : IPlugin
     {
         private static string config = string.Empty;
         private string configData = string.Empty;
         private Dictionary<string, string> globalConfig = new Dictionary<string, string>();
         ITracingService tracingService;
         string CanNo = string.Empty;
-        public createAccountContract(string unsecureString, string secureString)
+        public AccountContract(string unsecureString, string secureString)
         {
 
             if (String.IsNullOrWhiteSpace(unsecureString) || String.IsNullOrWhiteSpace(secureString))
@@ -37,53 +37,53 @@ namespace SAFCRMUnifyIntegration
             IOrganizationServiceFactory serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
             tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
-
-           // throw new InvalidPluginExecutionException("DEpth: "+context.Depth);
-
-            //if (context.Depth == 2)
-            //{
-                if (context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity)
+            if (context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity)
+            {
+                
+                    Entity AccountID = (Entity)context.InputParameters["Target"];
+                Entity integration = context.PostEntityImages["PostImage"];
+                if (!integration.Contains("onl_safid"))
                 {
-                    Entity order = (Entity)context.InputParameters["Target"];
-                    if (order.LogicalName != "onl_workorders")
-                        return;
-                    Entity Workorders = context.PostEntityImages["PostImage"];
-                   
-
-                    //Entity Sites = service.Retrieve("onl_customersite", siteorders.Id, new ColumnSet("spectra_contractresponse"));
-                    //string cresponse = Sites.GetAttributeValue<string>("spectra_contractresponse");
-                    //tracingService.Trace("Rersponce: ", cresponse);
-                    //if (!string.IsNullOrEmpty(Workorders.GetAttributeValue<String>("spectra_billingresponse")))
-                    //{
-                        EntityReference refsafid = Workorders.GetAttributeValue<EntityReference>("spectra_safid");
-                        Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
-                        EntityReference ownerLookup = (EntityReference)SAF.Attributes["onl_opportunityidid"];
-
-                        var opportunityName = ownerLookup.Name;
-                        tracingService.Trace("Opportunity Name: ", opportunityName);
-                        Guid opportunityid = ownerLookup.Id;
-                        EntityReference refsite = Workorders.GetAttributeValue<EntityReference>("onl_sitenameid");
-                        Entity siteorders = service.Retrieve("onl_customersite", refsite.Id, new ColumnSet("spectra_siteaccountno"));
-                        //Entity Parent_accountid = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_accountid"));
-                        CanNo = siteorders.GetAttributeValue<String>("spectra_siteaccountno");
-                        // CanNo = SAF.GetAttributeValue<string>("onl_spectra_accountid");
-                        //tracingService.Trace("prant Account Numbrer: ", Parent_accountid);
-                        //QueryExpression querycustomersite = new QueryExpression();
-                        //querycustomersite.EntityName = "onl_workorders";
-                        //querycustomersite.ColumnSet = new ColumnSet(true);
-                        //querycustomersite.Criteria.AddCondition("onl_sitenameid", ConditionOperator.Equal, siteorders.Id);
-                        //EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
-                        //Entity WorkorderEntity = resultcustomersite.Entities[0];
-                        CreateAccountContractRequest(service, SAF, CanNo, context, Workorders, opportunityid);
-
-                        // }
-                    //}
+                    return;
+                    //throw new InvalidPluginExecutionException("caf");
                 }
-            //}
-            //else
-            //    throw new InvalidPluginExecutionException("contex "+ context.Depth);
+                else
+                {string SD_details = this.GetValueForKey("AccSubBusiness");
+
+                string accountid = integration.GetAttributeValue<string>("alletech_canno");
+                EntityReference refsafid = integration.GetAttributeValue<EntityReference>("onl_safid");
+                Entity SAF = service.Retrieve("onl_saf", refsafid.Id, new ColumnSet(true));
+                Entity oppRef1 = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_opportunityidid"));
+                EntityReference ownerLookup = (EntityReference)oppRef1.Attributes["onl_opportunityidid"];
+
+                var opportunityName = ownerLookup.Name;
+                Guid opportunityid = ownerLookup.Id;
+
+                EntityReference siterecord = integration.GetAttributeValue<EntityReference>("spectra_siteidid");
+                Entity Sites = service.Retrieve("onl_customersite", siterecord.Id, new ColumnSet(true));
+                string SubBusinessValue = Sites.GetAttributeValue<EntityReference>("onl_subbusinesssegment").Name;
+                tracingService.Trace("Site Sub Business Value:-" + SubBusinessValue);
+                if (SubBusinessValue == SD_details)
+                {
+                    QueryExpression querycustomersite = new QueryExpression();
+                    querycustomersite.EntityName = "onl_workorders";
+                    querycustomersite.ColumnSet = new ColumnSet(true);
+                    querycustomersite.Criteria.AddCondition("onl_sitenameid", ConditionOperator.Equal, siterecord.Id);
+                    EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
+                    Entity WoEntity = resultcustomersite.Entities[0];
+                    if (resultcustomersite.Entities.Count > 0)
+                    {
+                        CreateAccountContractRequest(service, SAF, accountid, context, WoEntity, opportunityid, Sites);
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+            }
+            }
         }
-        public void CreateAccountContractRequest(IOrganizationService service, Entity SAF, String canId, IPluginExecutionContext context, Entity workorder,Guid opportunityid)
+        public void CreateAccountContractRequest(IOrganizationService service, Entity SAF, String canId, IPluginExecutionContext context, Entity workorder, Guid opportunityid,Entity uSites)
         {
             #region variables and decalaration
             int servicegroupno = 0, subcrino = 0;
@@ -93,11 +93,11 @@ namespace SAFCRMUnifyIntegration
             int billcycleno = 0;
             DateTime billStartDate = new DateTime();
             string billstartDateString = null;
-            
+
             Int32 billingFrequency = 0;
             String productId = String.Empty;
-           
-            int billProfileNo = 237, invoiceTemplateNo = 5, domSegment = 0;
+
+            int billProfileNo = 1, invoiceTemplateNo = 5, domSegment = 0;
             decimal RC = 0;
             decimal NRC = 0;
             decimal IPAmount = 0;
@@ -109,12 +109,14 @@ namespace SAFCRMUnifyIntegration
             #endregion
             DateTime customerAcceptdate = workorder.GetAttributeValue<DateTime>("spectra_acceptedbycustomerdate");
             int days = customerAcceptdate.Day;
+            tracingService.Trace("Customer Accepted date : " + customerAcceptdate);
+            tracingService.Trace("Customer Accepted date days : " + days);
             #region Account values
-          
-            tracingService.Trace("Acccount no: "+ canId);
+
+            tracingService.Trace("Acccount no: " + canId);
             QueryExpression query = new QueryExpression("account");
             query.NoLock = true;
-            query.ColumnSet.AddColumns("alletech_subscriptionno");
+            query.ColumnSet.AddColumns("alletech_subscriptionno", "alletech_servicegroupno");
             query.Criteria.AddCondition("alletech_accountid", ConditionOperator.Equal, canId);
             //query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
             EntityCollection acccollection = service.RetrieveMultiple(query);
@@ -130,29 +132,17 @@ namespace SAFCRMUnifyIntegration
                 }
                 else
                     throw new InvalidPluginExecutionException("Unify subcrino is empty for child account");
+                if (account.Attributes.Contains("alletech_servicegroupno"))
+                {
+                    servicegroupno = int.Parse(account.GetAttributeValue<string>("alletech_servicegroupno"));
+                    tracingService.Trace("alletech_subscriptionno: ", servicegroupno);
+                }
             }
             else
             {
                 throw new InvalidPluginExecutionException(" Account not found");
             }
-            Entity Parent_accountid = service.Retrieve("opportunity", opportunityid, new ColumnSet("alletech_accountid"));
-            string  AccountCanNo = Parent_accountid.GetAttributeValue<String>("alletech_accountid");
-
-            tracingService.Trace("Acccount no: " + AccountCanNo);
-            QueryExpression Accquery = new QueryExpression("account");
-            Accquery.ColumnSet.AddColumns( "alletech_servicegroupno");
-            Accquery.Criteria.AddCondition("alletech_accountid", ConditionOperator.Equal, AccountCanNo);
-            //Accquery.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
-            EntityCollection accservicegroup = service.RetrieveMultiple(Accquery);
-            if (accservicegroup.Entities.Count > 0)
-            {
-                Entity accountSG = accservicegroup.Entities[0];
-                if (accountSG.Attributes.Contains("alletech_servicegroupno"))
-                {
-                    servicegroupno = int.Parse(accountSG.GetAttributeValue<string>("alletech_servicegroupno"));
-                    tracingService.Trace("alletech_subscriptionno: ", servicegroupno);
-                }
-            }
+          
             #endregion
             //throw new InvalidPluginExecutionException("Account Service :-" + servicegroupno);
             Entity Parent_SAfName = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_name")); //getting SAF Name on behalf of safid
@@ -195,52 +185,36 @@ namespace SAFCRMUnifyIntegration
             string billEndDateString = null;
             string subscriptionStartDateString = null;
 
-            //if (IR.GetAttributeValue<DateTime>("alletech_date") != null)
-            //{
-            //subscriptionStartDate = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(IR.Attributes["alletech_date"]), TimeZoneInfo.Local);
-            //subscriptionStartDate = TimeZoneInfo.ConvertTimeFromUtc(Convert.ToDateTime(DateTime.Now), TimeZoneInfo.Local);
             subscriptionStartDateString = DateFormater(DateTime.Now);
-            //}
 
-            Entity oppbillcycle = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_billcycleonl"));
-
-            if (oppbillcycle.Attributes.Contains("onl_billcycleonl"))
+            tracingService.Trace("Get Bill cycle on Site Entity");
+            Entity oppbillcycle = service.Retrieve("onl_customersite", uSites.Id, new ColumnSet("onl_billcycle"));
+            tracingService.Trace("Bill cycle ID:" + oppbillcycle.GetAttributeValue<EntityReference>("onl_billcycle").Id);
+            tracingService.Trace("Bill cycle Name:" + oppbillcycle.GetAttributeValue<EntityReference>("onl_billcycle").Name);
+            if (oppbillcycle.Attributes.Contains("onl_billcycle"))
             {
-                Entity billCycleEnt = service.Retrieve("alletech_billcycle", oppbillcycle.GetAttributeValue<EntityReference>("onl_billcycleonl").Id, new ColumnSet("alletech_id", "alletech_days", "alletech_billcycleday"));
+                Entity billCycleEnt = service.Retrieve("alletech_billcycle", oppbillcycle.GetAttributeValue<EntityReference>("onl_billcycle").Id, new ColumnSet("alletech_id", "alletech_days", "alletech_billcycleday"));
                 billCycle = billCycleEnt.GetAttributeValue<String>("alletech_id").ToString();
                 billcycleno = Convert.ToInt32(billCycle);
 
-                if (seg.Name == "SDWAN")
-                {
-                    // 
+                tracingService.Trace("Bill cycle No:" + billcycleno);
+               
+                if (billCycleEnt.Attributes.Contains("alletech_billcycleday"))
                     firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, billCycleEnt.GetAttributeValue<int>("alletech_billcycleday"));
-                   // billInvoiceEndDate = new DateTime(billStartDate2.Year, billStartDate2.Month, 3 + 1);
+                else
+                    throw new InvalidPluginExecutionException("Please add bill cycle day");
+
+                if (firstInvoiceDate > DateTime.Now)
                     firstInvoiceDateString = DateFormater(firstInvoiceDate);
-
-                    Entity prodseg = service.Retrieve("alletech_productsegment", seg.Id, new ColumnSet("spectra_invoicetemplate", "spectra_billprofile", "spectra_dunningprofile"));
-
-                    billProfileNo = prodseg.GetAttributeValue<int>("spectra_billprofile");
-                    invoiceTemplateNo = prodseg.GetAttributeValue<int>("spectra_invoicetemplate");
-                    domSegment = prodseg.GetAttributeValue<int>("spectra_dunningprofile");
-                }
                 else
                 {
-                    if (billCycleEnt.Attributes.Contains("alletech_billcycleday"))
-                        firstInvoiceDate = new DateTime(billStartDate2.Year, billStartDate2.Month, billCycleEnt.GetAttributeValue<int>("alletech_billcycleday"));
-                    else
-                        throw new InvalidPluginExecutionException("Please add bill cycle day");
-
-                    if (firstInvoiceDate > DateTime.Now)
-                        firstInvoiceDateString = DateFormater(firstInvoiceDate);
-                    else
-                    {
-                        firstInvoiceDate = firstInvoiceDate.AddMonths(1);
-                        firstInvoiceDateString = DateFormater(firstInvoiceDate);
-                    }
+                    firstInvoiceDate = firstInvoiceDate.AddMonths(1);
+                    firstInvoiceDateString = DateFormater(firstInvoiceDate);
                 }
+                
             }
             tracingService.Trace("First Invoice date string : " + firstInvoiceDateString);
-          
+
 
             //if (IR.Attributes.Contains("alletech_date1"))
             //{
@@ -266,6 +240,7 @@ namespace SAFCRMUnifyIntegration
                         if (product.Attributes.Contains("name"))
                         {
                             productId = oppproductonl.GetAttributeValue<EntityReference>("onl_productattached").Name;
+                            tracingService.Trace("Product Name : " + productId);
                         }
                         else
                             throw new InvalidPluginExecutionException("Product does not have name!!");
@@ -312,8 +287,9 @@ namespace SAFCRMUnifyIntegration
             querycustomersite.EntityName = "onl_customersite";
             querycustomersite.ColumnSet = new ColumnSet(true);
             querycustomersite.Criteria.AddCondition("onl_opportunityidid", ConditionOperator.Equal, ownerLookup.Id);
+            querycustomersite.Criteria.AddCondition("spectra_siteaccountno", ConditionOperator.Equal, canId);
             EntityCollection resultcustomersite = service.RetrieveMultiple(querycustomersite);
-            Entity Rev = resultcustomersite.Entities[0];
+            Entity SiteEntityCol = resultcustomersite.Entities[0];
             tracingService.Trace("Count : " + resultcustomersite.Entities.Count);
             #region RC and NRC Amount
             Entity opp = service.Retrieve("opportunity", owneropp.Id, new ColumnSet("alletech_customernameaccountlookup", "opportunityid"));
@@ -327,7 +303,7 @@ namespace SAFCRMUnifyIntegration
                                 <attribute name='opportunityproductid' />
                                 <order attribute='productid' descending='false' />
                                 <filter type='and'>
-                                  <condition attribute='onl_customerdetailsid' operator='eq' value='{" + Rev.Id + @"}' />
+                                  <condition attribute='onl_customerdetailsid' operator='eq' value='{" + SiteEntityCol.Id + @"}' />
                                 </filter>
                                 <link-entity name='product' from='productid' to='productid' visible='false' link-type='outer' alias='oppprod'>
                                   <attribute name='alletech_plantype' />
@@ -377,34 +353,21 @@ namespace SAFCRMUnifyIntegration
                     }
                 }
             }
-            if(RC ==0 || NRC==0 )
+            if (RC == 0 || NRC == 0)
             {
-                if(IPAmount==0)
+                if (IPAmount == 0)
                 {
                     throw new InvalidPluginExecutionException("Site Product is Empty");
                 }
             }
             tracingService.Trace("RC : " + RC);
             tracingService.Trace("NRC : " + NRC);
-            //if (opp.Attributes.Contains("alletech_customernameaccountlookup"))
-            //{
-            //    if (RC != 0)
-            //        RC = RC / 2;
-
-            //    if (NRC != 0)
-            //        NRC = NRC / 2;
-
-            //    if (IPAmount != 0)
-            //        IPAmount = IPAmount / 2;
-
-            //    if (PremiumInstallationCarge != 0)
-            //        PremiumInstallationCarge = PremiumInstallationCarge / 2;
-            //}
-            #endregion
+            tracingService.Trace("Rate Plan Id : " + ipRatePlanId);
+            tracingService.Trace("Prod Rate Plan Id : " + ProdRatePlanId);
+                       #endregion
 
             #region request XML
             String requestXml = String.Empty;
-            
             requestXml = "<CreateAccountContractRequest>" +
             "<CAF_No>" + SafNo + "</CAF_No>" +
             "<CAN_No>" + canId + "</CAN_No>" +
@@ -447,10 +410,12 @@ namespace SAFCRMUnifyIntegration
 
             // throw new InvalidPluginExecutionException("test:-" + requestXml);
             #region Billing and Subcription request
-            var uri = new Uri("http://jbossprd.spectranet.in:9003/rest/createAccount/createAccountContract/");
-
+            var uri = new Uri(this.GetValueForKey("JBossUri"));
+            
+            tracingService.Trace("Api URL: " + uri);
             Byte[] requestByte = Encoding.UTF8.GetBytes(requestXml);
 
+            tracingService.Trace("Request XML: " + requestXml);
             WebRequest request;
             try
             {
@@ -486,7 +451,7 @@ namespace SAFCRMUnifyIntegration
                         //string Code = node1[i].ChildNodes.Item(2).InnerText.Trim();
                         string Message = node1[i].ChildNodes.Item(3).InnerText.Trim();
 
-
+                        tracingService.Trace("Response Message: " + Message);
                         Entity IntegrationLog = new Entity("alletech_integrationlog_enterprise");
                         IntegrationLog["alletech_cafno"] = CAF_No;
                         IntegrationLog["alletech_canno"] = CAN_No;
@@ -537,7 +502,23 @@ namespace SAFCRMUnifyIntegration
             return ISOformattedDate;
 
         }
+        private string GetValueForKey(string keyName)
+        {
+            string valueString = string.Empty;
+            try
+            {
 
+                if (this.globalConfig.ContainsKey(keyName))
+                {
+                    valueString = this.globalConfig[keyName];
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return valueString;
+        }
         private void ReadUnSecuredConfig(string localConfig)
         {
             string key = string.Empty;

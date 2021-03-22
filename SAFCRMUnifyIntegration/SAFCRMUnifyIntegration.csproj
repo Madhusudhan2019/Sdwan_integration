@@ -55,6 +55,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AccountContract.cs" />
+    <Compile Include="ChildIntegration.cs" />
     <Compile Include="createAccountContract.cs" />
     <Compile Include="InterfaceSAFBilling.cs" />
     <Compile Include="IntegrationSAF.cs" />
