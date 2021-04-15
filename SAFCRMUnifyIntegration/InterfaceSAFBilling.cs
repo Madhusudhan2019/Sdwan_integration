@@ -173,7 +173,8 @@ namespace SAFCRMUnifyIntegration
             
             Int32 billingFrequency = 0;
             String productId = String.Empty;
-            int billProfileNo = 237,  domSegment = 0;
+            //int billProfileNo = 237,  domSegment = 0;
+            int billProfileNo = 242, domSegment = 0;
             EntityReference seg = null;
 
             Entity safref = service.Retrieve("onl_saf", SAF.Id, new ColumnSet("onl_opportunityidid"));
@@ -336,7 +337,7 @@ namespace SAFCRMUnifyIntegration
             "<billCycle>" + billingFrequency + "</billCycle>" +
             "<billCycleDuration>M</billCycleDuration>" +
             "<firstInvoiceDate>" + firstInvoiceDateString + "</firstInvoiceDate>" +
-            "<invoiceTemplateNo>145</invoiceTemplateNo>" +
+            "<invoiceTemplateNo>205</invoiceTemplateNo>" +
             "<receiptTemplateNo>3</receiptTemplateNo>";
             tracingService.Trace("request XML: " + requestXml);
             domSegment = 0;

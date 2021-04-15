@@ -97,7 +97,8 @@ namespace SAFCRMUnifyIntegration
             Int32 billingFrequency = 0;
             String productId = String.Empty;
 
-            int billProfileNo = 1, invoiceTemplateNo = 5, domSegment = 0;
+            // int billProfileNo = 1, invoiceTemplateNo = 5, domSegment = 0;
+             int billProfileNo = 242, invoiceTemplateNo = 5, domSegment = 0;
             decimal RC = 0;
             decimal NRC = 0;
             decimal IPAmount = 0;
@@ -393,7 +394,7 @@ namespace SAFCRMUnifyIntegration
             "<billCycle>" + billingFrequency + "</billCycle>" +
             "<billCycleDuration>M</billCycleDuration>" +
             "<firstInvoiceDate>" + firstInvoiceDateString + "</firstInvoiceDate>" +
-            "<invoiceTemplateNo>145</invoiceTemplateNo>" +
+            "<invoiceTemplateNo>205</invoiceTemplateNo>" +
             "<receiptTemplateNo>3</receiptTemplateNo>";
             domSegment = 0;
             if (domSegment != 0)
