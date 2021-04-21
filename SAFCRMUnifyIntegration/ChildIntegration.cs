@@ -776,13 +776,13 @@ namespace SAFCRMUnifyIntegration
                "<shortName>" + paccshort + "-0" + rowcount + "</shortName>" +
                "<revenueGroupId>" + CafInsCityRevGrpId + "</revenueGroupId>" +
                "<receiptLedgerAccountNo>" + receiptLedgerAccountNo + "</receiptLedgerAccountNo>" +
-               ////"<societyName>" + "NA" + "</societyName>" +
-               //// "<areaName>" + "NA" + "</areaName>" +
-               //// "<societyFieldId>2</societyFieldId>" +
-               //// "<areaFieldId>3</areaFieldId>" +
-               //// "<productSegmentNo>6</productSegmentNo>" +
-               //// "<verticalSegmentNo>10</verticalSegmentNo>" +
-               //// "<industryTypeNo>" + industryname + "</industryTypeNo>" +
+               "<societyName>" + "NA" + "</societyName>" +
+                "<areaName>" + "NA" + "</areaName>" +
+                "<societyFieldId>2</societyFieldId>" +
+                "<areaFieldId>3</areaFieldId>" +
+                "<productSegmentNo>6</productSegmentNo>" +
+                "<verticalSegmentNo>10</verticalSegmentNo>" +
+                "<industryTypeNo>" + industryname + "</industryTypeNo>" +
                "</ChildOrganisationRequest>";
 
                 #region Contact details
